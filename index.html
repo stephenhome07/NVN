@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V1.02 NVN 句子溫習系統 (學生端)</title>
+    <title>V1.03 NVN 句子溫習系統 (學生端)</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; background-color: #f4f6f7; color: #333; }
         .container { max-width: 650px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin: 0 auto; }
@@ -41,7 +41,7 @@
 <body>
 
 <div class="container">
-    <h2>V1.02🎯 NVN 句子溫習系統</h2>
+    <h2>V1.03🎯 NVN 句子溫習系統</h2>
 
     <div id="loginSection" class="card">
         <label for="studentSid">請輸入你的學校電郵登入：</label>
@@ -87,7 +87,6 @@
     </div>
 </div>
 
-    
     <div id="passSection" class="hidden" style="background-color: #e6fffa; border: 2px solid #319795; text-align: center; padding: 40px; border-radius: 12px; margin-top: 20px;">
         <h2 style="border:none; color: #234e52; margin-bottom:15px;">🎉 恭喜你！挑戰成功！</h2>
         <div style="font-size: 70px; margin: 20px 0;">🔓</div>
@@ -103,11 +102,8 @@
 
     let currentStudent = null;
     let mySentences = [];
-    
-    // 🔴 【核心新增】用來儲存從後端 Settings 抓到的動態設定值（預設值為 8 和 4）
     let globalSettings = { rooms: [], revisionCount: 8, testCount: 4 };
 
-    // 🔴 【核心新增】網頁載入時自動執行初始化，抓取 Settings 內容
     window.onload = function() {
         initSystem();
     };
@@ -124,7 +120,6 @@
             if (data.status === "success") {
                 globalSettings = data.settings;
                 
-                // 動態渲染課室下拉選單
                 roomSelect.innerHTML = "";
                 if (globalSettings.rooms && globalSettings.rooms.length > 0) {
                     globalSettings.rooms.forEach(room => {
@@ -137,7 +132,6 @@
                     roomSelect.innerHTML = '<option value="">(Excel未設定課室)</option>';
                 }
 
-                // 動態更新介面上的提示數字
                 document.getElementById("displayRevCount").innerText = globalSettings.revisionCount;
                 document.getElementById("queueRevCount").innerText = globalSettings.revisionCount;
                 document.getElementById("queueTestCount").innerText = globalSettings.testCount + " 句";
@@ -162,7 +156,6 @@
 
         fetch(GAS_URL, {
             method: "POST",
-            // 🔴 將從 Settings 分頁拿到的 revisionCount 帶入傳送
             body: JSON.stringify({ action: "studentLogin", sid: sid, revisionCount: globalSettings.revisionCount })
         })
         .then(r => r.json())
@@ -187,7 +180,6 @@
         });
     }
 
-    // 渲染彩色的 N-V-N 區塊
     function renderVocabList() {
         const container = document.getElementById("vocabList");
         container.innerHTML = "";
@@ -236,7 +228,6 @@
 
     function requestQueue() {
         if (!currentStudent) return;
-        // 🔴 提示訊息也改為動態動態顯示設定的數字
         if (!confirm(`確定準備好默書了嗎？\n系統將從這 ${globalSettings.revisionCount} 句中隨機抽 ${globalSettings.testCount} 句測驗喔！`)) return;
 
         const btn = document.getElementById("btnJoinQueue");
@@ -245,7 +236,6 @@
 
         fetch(GAS_URL, {
             method: "POST",
-            // 🔴 這裡直接抓取登入時就存好的課室 (currentStudent.room) 以及 Settings 裡的 testCount 傳給 GAS
             body: JSON.stringify({ 
                 action: "joinQueue", 
                 sid: currentStudent.sid, 
@@ -314,7 +304,14 @@
         document.getElementById("studentSid").value = "";
         currentStudent = null;
         mySentences = [];
-        // 重新初始化抓取最新設定
+        
+        // 🔴【核心修正】返回首頁時，確保把溫習畫面的排隊按鈕狀態徹底還原
+        const btn = document.getElementById("btnJoinQueue");
+        if(btn) {
+            btn.disabled = false;
+            btn.innerText = "我已記熟，準備好默書了 🚀";
+        }
+        
         initSystem();
     }
 </script>
