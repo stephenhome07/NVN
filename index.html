@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V1.0 NVN 系統：升級版連通測試</title>
+    <title>V1.01 NVN 系統：升級版連通測試</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 30px; background-color: #f4f7f6; color: #333; }
         .container { max-width: 600px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -50,7 +50,7 @@
 </div>
 
 <script>
-    // ⚠️ 請在此處替換成你新部署的 GAS Web App URL
+    // ⚠️ 請在此處確認是你新部署的 GAS Web App URL
     const GAS_URL = "https://script.google.com/macros/s/AKfycbziG9ZuR_hPZMRsZ98sGIvRVQFDABO3L7uimBbI-6bLeR2hqmBLtUNoa6TqMHftNb6-jA/exec"; 
 
     // 測試 1：讀取學生資料
@@ -59,9 +59,18 @@
         const resultDiv = document.getElementById("result1");
         resultDiv.innerHTML = "正在連線查詢...";
         
-        const url = `${GAS_URL}?action=getStudent&sid=${encodeURIComponent(sid)}`;
-        
-        fetch(url, { method: "GET", mode: "cors" })
+        // 改用 POST，把學號放在 body 裡面，避開 Google 網址域名攔截 Bug
+        fetch(GAS_URL, { 
+            method: "POST", 
+            mode: "cors",
+            headers: {
+                "Content-Type": "text/plain" // 註：用 text/plain 可以繞過瀏覽器的 OPTIONS 預檢，速度最快且最穩
+            },
+            body: JSON.stringify({
+                action: "getStudent",
+                sid: sid
+            })
+        })
         .then(response => response.json())
         .then(data => {
             if(data.status === "success") {
@@ -98,10 +107,23 @@
         
         resultDiv.innerHTML = "正在寫入數據...";
         
-        // 組裝包含新欄位的網址
-        const url = `${GAS_URL}?action=submitLog&sid=${encodeURIComponent(sid)}&name=${encodeURIComponent(name)}&className=${encodeURIComponent(className)}&classNumber=${encodeURIComponent(classNumber)}&score=${encodeURIComponent(score)}&status=${encodeURIComponent(status)}`;
-        
-        fetch(url, { method: "GET", mode: "cors" })
+        // 同樣改用 POST 寫入紀錄
+        fetch(GAS_URL, { 
+            method: "POST", 
+            mode: "cors",
+            headers: {
+                "Content-Type": "text/plain"
+            },
+            body: JSON.stringify({
+                action: "submitLog",
+                sid: sid,
+                name: name,
+                className: className,
+                classNumber: classNumber,
+                score: score,
+                status: status
+            })
+        })
         .then(response => response.json())
         .then(data => {
             if(data.status === "success") {
