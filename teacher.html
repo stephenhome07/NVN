@@ -10,6 +10,10 @@
         h1 { color: #63b3ed; text-align: center; margin-bottom: 5px; }
         .subtitle { text-align: center; color: #a0aec0; margin-bottom: 25px; font-size: 14px; }
         
+        /* 系統當前參數看板 */
+        .config-bar { background: #232d3f; padding: 12px 20px; border-radius: 8px; margin-bottom: 15px; display: flex; flex-wrap: wrap; justify-content: space-between; font-size: 14px; border: 1px dashed #4a5568; color: #cbd5e0; }
+        .config-item { display: flex; align-items: center; gap: 5px; }
+
         /* 正在測試的聚焦視窗 */
         .focus-card { background: #2d3748; border: 3px solid #4299e1; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .focus-title { font-size: 22px; font-weight: bold; color: #fbd38d; border-bottom: 1px solid #4a5568; padding-bottom: 10px; margin-bottom: 15px; }
@@ -46,6 +50,19 @@
     <h1>👨‍🏫 NVN 總司令講台控制面板</h1>
     <div class="subtitle">HO YU COLLEGE • 英語純紙筆默寫即時批改系統</div>
 
+    <div class="config-bar">
+        <div class="config-item">📊 當前雲端參數設定：</div>
+        <div class="config-item">📖 學生溫習題數：<span id="cfgRevCount" style="color:#fbd38d; font-weight:bold;">載入中...</span> 題</div>
+        <div class="config-item">🎯 抽問抽考題數：<span id="cfgTestCount" style="color:#fbd38d; font-weight:bold;">載入中...</span> 題</div>
+    </div>
+
+    <div style="background: #2d3748; padding: 15px; border-radius: 8px; margin-bottom: 25px; display: flex; align-items: center; gap: 12px; border: 1px solid #4a5568;">
+        <label style="font-weight: bold; color: #63b3ed; font-size: 16px;">🏫 選擇當前講台所在的課室：</label>
+        <select id="teacherRoom" onchange="fetchQueue()" style="padding: 10px 15px; font-size: 16px; border-radius: 6px; background: #1a202c; color: white; border: 1px solid #4a5568; font-weight: bold; cursor: pointer;">
+            <option value="ALL">顯示所有課室 (全部名單)</option>
+            </select>
+    </div>
+
     <div id="focusArea" class="focus-card" style="display: none;">
         <div class="focus-title">
             🔊 正在測試：<span id="fStudent" style="color:#63b3ed;">---</span> 
@@ -53,7 +70,7 @@
         </div>
         
         <p style="color:#a0aec0; margin:0 0 10px 0; font-size:14px;">💡 講台提示：你可以口頭讀出中文提示，或者將螢幕面向學生給予視覺提示。核對學生手寫答案是否與白色英文一致。</p>
-        
+        <button class="btn" id="btnToggleAnswers" style="background-color: #e67e22; color: white; margin-bottom: 15px; padding: 10px 20px; font-size: 16px; width: auto;" onclick="toggleAnswers()">👁️ 顯示英文答案核對</button>
         <div id="testQuestionsContainer"></div>
 
         <div class="control-row">
@@ -67,14 +84,14 @@
                 <option value="LV6">LV6: 大學用 / 高階</option>
             </select>
             
-            <button class="btn btn-pass" onclick="submitAssessment('Pass')">🎉 合格 (PASS) / 准予放學</button>
-            <button class="btn btn-fail" onclick="submitAssessment('Fail')">❌ 不合格 (FAIL) / 回位重練</button>
+            <button class="btn btn-pass" id="btnPass" onclick="submitAssessment('Pass')">🎉 合格 (PASS) / 准予放學</button>
+            <button class="btn btn-fail" id="btnFail" onclick="submitAssessment('Fail')">❌ 不合格 (FAIL) / 回位重練</button>
         </div>
     </div>
 
     <div class="refresh-bar">
         <h3>🔴 講台前排隊名單 (<span id="queueCount">0</span> 人正在等候)</h3>
-        <button onclick="fetchQueue()" style="background:#4a5568; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer; font-weight:bold;">🔄 手動重整</button>
+        <button id="btnRefresh" onclick="fetchQueue()" style="background:#4a5568; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer; font-weight:bold;">🔄 手動重整</button>
     </div>
     
     <table class="queue-table">
@@ -99,48 +116,95 @@
 
     let currentQueue = [];
     let selectedStudent = null;
+    let systemSettings = { rooms: [], revisionCount: 8, testCount: 4 };
 
-    // 頁面開啟自動載入，並設定每 6 秒自動重新撈取名單
+    // 頁面開啟：先撈取後台 Settings，再撈取名單並開啟自動同步
     window.onload = function() {
-        fetchQueue();
-        setInterval(fetchQueue, 6000); 
+        loadInitSettings();
     };
 
-    // 從 Google Sheet 撈取所有「排隊中」的學生
-    function fetchQueue() {
+    // 🌟 全新功能：從 Settings 獲取最新參數與課室名單
+    function loadInitSettings() {
         fetch(GAS_URL, {
             method: "POST",
-            body: JSON.stringify({ action: "getQueue" })
+            body: JSON.stringify({ action: "getInitData" })
         })
         .then(r => r.json())
         .then(data => {
+            if(data.status === "success") {
+                systemSettings = data.settings;
+                
+                // 更新看板顯示
+                document.getElementById("cfgRevCount").innerText = systemSettings.revisionCount;
+                document.getElementById("cfgTestCount").innerText = systemSettings.testCount;
+                
+                // 動態渲染課室下拉選單
+                const roomSelect = document.getElementById("teacherRoom");
+                // 保留第一個 "顯示所有課室"
+                roomSelect.innerHTML = '<option value="ALL">顯示所有課室 (全部名單)</option>';
+                
+                systemSettings.rooms.forEach(room => {
+                    if(room) {
+                        const opt = document.createElement("option");
+                        opt.value = room;
+                        opt.innerText = room + " 課室";
+                        roomSelect.appendChild(opt);
+                    }
+                });
+
+                // 撈取設定成功後，才開始加載排隊名單
+                fetchQueue();
+                setInterval(fetchQueue, 6000); 
+            } else {
+                alert("獲取雲端參數失敗: " + data.message);
+            }
+        })
+        .catch(err => console.error("系統初始設定載入失敗:", err));
+    }
+
+    // 1. 撈取名單（帶入動態選擇的課室）
+    function fetchQueue() {
+        const roomSelect = document.getElementById("teacherRoom");
+        const selectedRoom = roomSelect ? roomSelect.value : "ALL";
+        const btnRefresh = document.getElementById("btnRefresh");
+        if(btnRefresh) btnRefresh.innerText = "🔄 重整中...";
+
+        fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "getQueue", room: selectedRoom })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if(btnRefresh) btnRefresh.innerText = "🔄 手動重整";
             if(data.status === "success") {
                 currentQueue = data.queue;
                 renderQueueTable();
             }
         })
-        .catch(err => console.error("撈取排隊名單失敗:", err));
+        .catch(err => {
+            if(btnRefresh) btnRefresh.innerText = "🔄 手動重整";
+            console.error("撈取排隊名單失敗:", err);
+        });
     }
 
-    // 渲染排隊表格
+    // 2. 渲染排隊表格
     function renderQueueTable() {
         const tbody = document.getElementById("queueTableBody");
         document.getElementById("queueCount").innerText = currentQueue.length;
         
         if(currentQueue.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">☕ 目前沒有學生在排隊，大家正在座位用紙筆練習中。</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">☕ 目前該課室沒有學生在排隊。</td></tr>';
             return;
         }
 
         tbody.innerHTML = "";
         currentQueue.forEach(student => {
             const tr = document.createElement("tr");
-            // 點擊整行，立刻把該學生拉上「聚焦測試核心區」
             tr.onclick = () => selectStudentForTest(student);
             
             tr.innerHTML = `
                 <td><span class="badge-live">等待中</span></td>
-                <td><strong>${student.className}班</strong> (${student.classNumber}號)</td>
+                <td><strong>${student.className}班</strong> (${student.classNumber}號)<br><span style="color:#fc8181; font-size:12px;">📍 前往: ${student.room}</span></td>
                 <td><span style="font-size:18px; font-weight:bold; color:#63b3ed;">${student.name}</span></td>
                 <td><span class="badge-lv">${student.level}</span></td>
                 <td><button style="background:#3182ce; color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:bold;">🎯 開始測試</button></td>
@@ -149,23 +213,22 @@
         });
     }
 
-    // 當老師點選某個學生，進入講台測試狀態
+    // 3. 點選學生：進入測試區（支援雲端動態抽問題數）
     function selectStudentForTest(student) {
         selectedStudent = student;
         
-        // 顯示聚焦卡片
         document.getElementById("focusArea").style.display = "block";
-        document.getElementById("fStudent").innerText = `${student.className}班 ${student.name}`;
+        document.getElementById("fStudent").innerText = `${student.className}班 ${student.name} (於 ${student.room} 課室)`;
         document.getElementById("fSid").innerText = `(電郵: ${student.sid})`;
         
-        // 預先將「秘密改級」下拉選單預設為他目前的 Level
         document.getElementById("actionLevel").value = student.level;
+        document.getElementById("btnToggleAnswers").innerText = "👁️ 顯示英文答案核對";
 
-        // 解析並渲染 4 句抽考題（將 ||| 拆開成英文與中文）
         const container = document.getElementById("testQuestionsContainer");
         container.innerHTML = "";
 
-        const questionFields = [student.s1, student.s2, student.s3, student.s4];
+        // 🌟 改進點：直接使用後端傳過來的 testQuestions 陣列（該陣列長度即為後台設定的抽考題數）
+        const questionFields = student.testQuestions || [];
         let count = 1;
 
         questionFields.forEach(rawField => {
@@ -176,19 +239,47 @@
 
             const qDiv = document.createElement("div");
             qDiv.className = "test-question";
+            
             qDiv.innerHTML = `
-                <div class="eng-ans">第 ${count} 句：${english}</div>
-                <div class="chi-hint">📢 中文提示：${chinese}</div>
+                <div class="chi-hint" style="font-size: 18px; color: #cbd5e0; font-weight: bold; margin-bottom: 8px;">
+                    📢 第 ${count} 題提示：${chinese}
+                    <button onclick="speakText('${english.replace(/'/g, "\\'")}')" style="background:#9b59b6; color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer; margin-left:12px; font-size:14px; font-weight:bold;">🔊 播放讀音</button>
+                </div>
+                <div class="eng-ans" style="display: none; font-size: 20px; font-weight: bold; color: #63b3ed; letter-spacing: 0.5px; background:#1a202c; padding:10px; border-radius:6px; border: 1px dashed #4a5568;">💡 正確答案：${english}</div>
             `;
             container.appendChild(qDiv);
             count++;
         });
         
-        // 滾動到最上方方便看題
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // 老師點擊「合格」或「不合格」
+    // 4. 控制答案顯示與隱藏
+    function toggleAnswers() {
+        const ansDivs = document.querySelectorAll(".eng-ans");
+        const btn = document.getElementById("btnToggleAnswers");
+        
+        ansDivs.forEach(div => {
+            if (div.style.display === "none") {
+                div.style.display = "block";
+                btn.innerText = "🙈 隱藏英文答案";
+            } else {
+                div.style.display = "none";
+                btn.innerText = "👁️ 顯示英文答案核對";
+            }
+        });
+    }
+
+    // 5. 教師端語音朗讀功能
+    function speakText(text) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.85; 
+        window.speechSynthesis.speak(utterance);
+    }
+
+    // 6. 老師送出審核結果 (新增防重複點擊鎖定)
     function submitAssessment(status) {
         if (!selectedStudent) return;
         
@@ -197,7 +288,11 @@
         
         if (!confirm(confirmMsg)) return;
 
-        // 隱藏聚焦區，防止重複點擊
+        // 防呆：先停用按鈕，再隱藏聚焦區
+        const btnPass = document.getElementById("btnPass");
+        const btnFail = document.getElementById("btnFail");
+        if(btnPass) btnPass.disabled = true;
+        if(btnFail) btnFail.disabled = true;
         document.getElementById("focusArea").style.display = "none";
 
         fetch(GAS_URL, {
@@ -211,14 +306,18 @@
         })
         .then(r => r.json())
         .then(data => {
+            if(btnPass) btnPass.disabled = false;
+            if(btnFail) btnFail.disabled = false;
             if (data.status === "success") {
                 selectedStudent = null;
-                fetchQueue(); // 重新整理名單
+                fetchQueue(); 
             } else {
                 alert("後端出錯：" + data.message);
             }
         })
         .catch(err => {
+            if(btnPass) btnPass.disabled = false;
+            if(btnFail) btnFail.disabled = false;
             alert("網路錯誤，無法提交成績。");
         });
     }
