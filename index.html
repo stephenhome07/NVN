@@ -3,240 +3,185 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V1.0 NVN 英語句子溫習與拼字系統</title>
+    <title>NVN 句子溫習系統 (學生端)</title>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background-color: #eef2f3; color: #333; }
-        .container { max-width: 700px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin: 0 auto; }
-        h2, h3 { color: #2c3e50; margin-top: 0; }
-        .card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-bottom: 20px; background: #fff; }
-        label { font-weight: bold; display: block; margin: 10px 0 5px; color: #555; }
-        input, select, button { width: 100%; padding: 12px; margin-top: 5px; box-sizing: border-box; border-radius: 6px; border: 1px solid #ccc; font-size: 16px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; background-color: #f4f6f7; color: #333; }
+        .container { max-width: 650px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin: 0 auto; }
+        h2 { color: #2c3e50; margin-top: 0; text-align: center; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
+        .card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #fff; }
+        label { font-weight: bold; display: block; margin: 10px 0 5px; color: #4a5568; }
+        input, button { width: 100%; padding: 14px; box-sizing: border-box; border-radius: 8px; border: 1px solid #cbd5e0; font-size: 16px; }
         button { background-color: #3498db; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
         button:hover { background-color: #2980b9; }
-        .btn-audio { background-color: #9b59b6; margin-bottom: 10px; }
+        .student-bar { background: #edf2f7; padding: 12px; border-radius: 8px; font-weight: bold; margin-bottom: 20px; display: flex; justify-content: space-between; font-size: 15px; }
+        .vocab-item { background: #f8fafc; border-left: 5px solid #9b59b6; padding: 12px; margin-bottom: 12px; border-radius: 0 6px 6px 0; }
+        .vocab-words { font-size: 18px; font-weight: bold; color: #2d3748; margin-bottom: 5px; letter-spacing: 0.5px; }
+        .vocab-chinese { font-size: 14px; color: #718096; }
+        .btn-audio { background-color: #9b59b6; width: auto; padding: 6px 12px; font-size: 14px; margin-top: 5px; border-radius: 4px; float: right; }
         .btn-audio:hover { background-color: #8e44ad; }
-        .btn-check { background-color: #2ecc71; }
-        .btn-check:hover { background-color: #27ae60; }
-        .student-info-bar { background: #d5dbdb; padding: 10px 15px; border-radius: 6px; font-weight: bold; margin-bottom: 20px; display: flex; justify-content: space-between; }
-        .nvn-structure { background: #fcf3cf; padding: 10px; border-radius: 6px; font-weight: bold; text-align: center; color: #b7950b; letter-spacing: 1px; margin: 10px 0; }
-        .result-msg { font-size: 18px; font-weight: bold; margin-top: 15px; text-align: center; }
-        .success { color: #27ae60; }
-        .error { color: #c0392b; }
+        .btn-ready { background-color: #e67e22; font-size: 18px; padding: 18px; margin-top: 25px; box-shadow: 0 4px 10px rgba(230,126,34,0.3); }
+        .btn-ready:hover { background-color: #d35400; }
+        .msg { font-size: 16px; font-weight: bold; margin-top: 15px; text-align: center; }
+        .error { color: #e53e3e; }
+        .queue-box { background: #fff3cd; border: 2px dashed #ffc107; padding: 30px; text-align: center; border-radius: 12px; margin-top: 20px; }
         .hidden { display: none; }
+        .clearfix::after { content: ""; clear: both; display: table; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🎯 NVN 英語句子溫習與拼字系統 (V2.1 6級版)</h2>
+    <h2>🎯 NVN 英語句子溫習系統</h2>
 
+    <!-- 1. 學生登入 -->
     <div id="loginSection" class="card">
-        <h3>👤 學生登入</h3>
-        <label for="studentSid">請輸入你的學校電郵 (學號 SID):</label>
+        <label for="studentSid">請輸入你的學校電郵登入：</label>
         <input type="text" id="studentSid" placeholder="例如: s19010040@hoyu.edu.hk">
-        <button onclick="loginStudent()" style="margin-top: 15px;">進入溫習系統</button>
-        <div id="loginStatus" class="result-msg"></div>
+        <button onclick="loginStudent()" style="margin-top: 15px;">開始溫習</button>
+        <div id="loginStatus" class="msg error"></div>
     </div>
 
+    <!-- 2. 主溫習介面 -->
     <div id="mainSection" class="hidden">
-        <div class="student-info-bar">
-            <span id="displayStudent">學生: 載入中...</span>
-            <span id="displayClass">班別: 載入中...</span>
+        <div class="student-bar">
+            <span id="displayStudent">學生：---</span>
+            <span id="displayClass">班別：---</span>
         </div>
 
-        <div class="card">
-            <h3>🛠️ 選擇你的學習難度 (6級能力分級)</h3>
-            <select id="levelFilter" onchange="filterQuestions()">
-                <option value="LV1">LV1: 香港小一至小三程度</option>
-                <option value="LV2">LV2: 香港小四至小六程度</option>
-                <option value="LV3">LV3: 香港中一至中二程度</option>
-                <option value="LV4">LV4: 香港中三至中四程度</option>
-                <option value="LV5">LV5: 香港中五至中六程度</option>
-                <option value="LV6">LV6: 大學用 / 高階挑戰</option>
-            </select>
+        <div class="card" style="background-color: #f0fff4; border-color: #c6f6d5;">
+            <p style="margin:0; font-weight:bold; color:#22543d; text-align:center;">
+                📝 溫習指引：請準備好白紙和原子筆。<br>一邊看著螢幕上的生字、一邊聽讀音，在紙上嘗試手寫練習！
+            </p>
         </div>
 
-        <div id="questionCard" class="card hidden">
-            <h3>📝 句子拼字挑戰 (<span id="displayCurrentLevel" style="color:#e67e22;"></span>)</h3>
-            <p style="font-size: 18px; color: #7f8c8d;">中文提示：<strong id="qChinese" style="color:#2c3e50;"></strong></p>
-            
-            <div id="nvnHint" class="nvn-structure"></div>
+        <h3>📚 今日溫習句子與生字庫</h3>
+        <div id="vocabList"><!-- 動態載入生字庫 --></div>
 
-            <button class="button btn-audio" onclick="speakCurrentSentence()">🔊 聽真人英文發音 (TTS)</button>
+        <!-- 我準備好默書按鈕 -->
+        <button class="btn-ready" id="btnJoinQueue" onclick="requestQueue()">我已記熟，準備好默書了 🚀</button>
+    </div>
 
-            <label for="studentAnswer">請在下方拼寫出整句英文 (注意大小寫及標點符號)：</label>
-            <input type="text" id="studentAnswer" placeholder="在此輸入完整的英文句子..." autocomplete="off">
-            
-            <button class="button btn-check" onclick="checkAnswer()" style="margin-top: 15px;">檢查答案</button>
-            <div id="challengeResult" class="result-msg"></div>
-            
-            <button id="btnSubmitLog" class="button hidden" onclick="uploadScoreLog()" style="background-color: #e67e22; margin-top: 15px;">💾 將本次溫習紀錄存入 Sheet</button>
-            <div id="logStatus" class="result-msg"></div>
-        </div>
-        
-        <div id="noQuestionMsg" class="card hidden" style="text-align: center; color: #7f8c8d;">
-            目前此難度級別暫無題目，請切換其他難度。
-        </div>
+    <!-- 3. 排隊成功鎖定畫面 -->
+    <div id="queueSection" class="queue-box hidden">
+        <h2 style="border:none; color:#d35400; margin-bottom:15px;">🔴 已進入排隊名單</h2>
+        <p style="font-size: 18px; font-weight: bold; color: #2c3e50;" id="queueUserBar"></p>
+        <p style="font-size: 16px; color: #7f8c8d; line-height: 1.6;">
+            系統已為你隨機抽選了今天的 5 句默書題目。<br>
+            <strong style="color: #e74c3c; font-size: 18px;">請現在放下 iPad，只拿著你的「白紙」和「筆」，</strong><br>
+            走到講台排隊找老師開始默書測試！
+        </p>
+        <div style="font-size: 50px; margin: 20px 0;">⏳</div>
+        <p style="color: #7f8c8d; font-size: 13px;">（請勿關閉或重新整理此網頁，默書完畢後老師會為你解鎖）</p>
     </div>
 </div>
 
 <script>
-    // ⚠️ 請確認為你新部署的 GAS Web App URL
+    // ⚠️ 請確認這是你最新的 GAS Web App 網址
     const GAS_URL = "https://script.google.com/macros/s/AKfycbziG9ZuR_hPZMRsZ98sGIvRVQFDABO3L7uimBbI-6bLeR2hqmBLtUNoa6TqMHftNb6-jA/exec"; 
 
-    // 全局變數
     let currentStudent = null;
-    let allSentences = [];
-    let filteredSentences = [];
-    let currentIndex = 0;
+    let mySentences = [];
 
-    // 1. 學生登入驗證
+    // 1. 學生秘密登入
     function loginStudent() {
         const sid = document.getElementById("studentSid").value.trim();
         const statusDiv = document.getElementById("loginStatus");
-        if(!sid) { alert("請輸入學號！"); return; }
+        if(!sid) { alert("請輸入學校電郵！"); return; }
         
-        statusDiv.className = "result-msg";
-        statusDiv.innerHTML = "正在驗證身份並載入句子庫...";
-
-        Promise.all([
-            fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "getStudent", sid: sid }) }).then(r => r.json()),
-            fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "getSentences" }) }).then(r => r.json())
-        ])
-        .then(([studentData, sentenceData]) => {
-            if (studentData.status === "success" && sentenceData.status === "success") {
-                currentStudent = {
-                    sid: sid,
-                    name: studentData.name,
-                    className: studentData.className,
-                    classNumber: studentData.classNumber
-                };
-                allSentences = sentenceData.sentences;
-                
-                document.getElementById("loginSection").classList.add("hidden");
-                document.getElementById("mainSection").classList.remove("hidden");
-                
-                document.getElementById("displayStudent").innerText = `學生: ${currentStudent.name} (${currentStudent.sid})`;
-                document.getElementById("displayClass").innerText = `班別: ${currentStudent.className} (${currentStudent.classNumber}號)`;
-                
-                filterQuestions();
-            } else {
-                statusDiv.className = "result-msg error";
-                statusDiv.innerHTML = studentData.status !== "success" ? `錯誤: ${studentData.message}` : "無法讀取句子庫。";
-            }
-        })
-        .catch(err => {
-            statusDiv.className = "result-msg error";
-            statusDiv.innerHTML = `連線失敗，請確認網路或 GAS 網址。<br>${err}`;
-        });
-    }
-
-    // 2. 根據新 6 級制過濾題目
-    function filterQuestions() {
-        const selectedLevel = document.getElementById("levelFilter").value;
-        filteredSentences = allSentences.filter(s => s.level.trim().toUpperCase() === selectedLevel.toUpperCase());
-        currentIndex = 0;
-        
-        showQuestion();
-    }
-
-    // 3. 顯示目前題目
-    function showQuestion() {
-        document.getElementById("studentAnswer").value = "";
-        document.getElementById("challengeResult").innerHTML = "";
-        document.getElementById("logStatus").innerHTML = "";
-        document.getElementById("btnSubmitLog").classList.add("hidden");
-
-        if (filteredSentences.length === 0) {
-            document.getElementById("questionCard").classList.add("hidden");
-            document.getElementById("noQuestionMsg").classList.remove("hidden");
-            return;
-        }
-
-        document.getElementById("questionCard").classList.remove("hidden");
-        document.getElementById("noQuestionMsg").classList.add("hidden");
-
-        const q = filteredSentences[currentIndex];
-        document.getElementById("displayCurrentLevel").innerText = q.level;
-        document.getElementById("qChinese").innerText = q.chinese;
-        
-        document.getElementById("nvnHint").innerText = `NVN 結構提示：[ 主語(N): ${getWordCount(q.n1)}字 ] + [ 動詞(V): ${getWordCount(q.v)}字 ] + [ 賓語(N): ${getWordCount(q.n2)}字 ]`;
-    }
-
-    function getWordCount(str) {
-        return str.trim().split(/\s+/).filter(w => w.length > 0).length;
-    }
-
-    // 4. 免費原生真人發音
-    function speakCurrentSentence() {
-        if(filteredSentences.length === 0) return;
-        const text = filteredSentences[currentIndex].full;
-        
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'en-US'; 
-        utterance.rate = 0.85; // 速度調慢一點點，更適合基礎弱的學生聽寫
-        window.speechSynthesis.speak(utterance);
-    }
-
-    // 5. 檢查答案
-    function checkAnswer() {
-        const studentAns = document.getElementById("studentAnswer").value.trim().toLowerCase();
-        const correctAnswer = filteredSentences[currentIndex].full.trim().toLowerCase();
-        const resultDiv = document.getElementById("challengeResult");
-
-        // 去除標點與多餘空格進行公平比對
-        const cleanAns = studentAns.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").replace(/\s+/g, " ");
-        const cleanCorrect = correctAnswer.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").replace(/\s+/g, " ");
-
-        if (cleanAns === cleanCorrect) {
-            resultDiv.className = "result-msg success";
-            resultDiv.innerHTML = "🎉 太棒了！拼寫完全正確！";
-            document.getElementById("btnSubmitLog").classList.remove("hidden"); 
-        } else {
-            resultDiv.className = "result-msg error";
-            resultDiv.innerHTML = "❌ 拼寫有些不對喔，再聽一次聲音試試看！";
-        }
-    }
-
-    // 6. 上傳成績 Log 到試算表 (會自動標註是哪個 LV 通過)
-    function uploadScoreLog() {
-        const logStatus = document.getElementById("logStatus");
-        logStatus.className = "result-msg";
-        logStatus.innerHTML = "正在上傳紀錄...";
-
-        const q = filteredSentences[currentIndex];
+        statusDiv.innerHTML = "正在連線載入你的個人溫習庫...";
 
         fetch(GAS_URL, {
             method: "POST",
-            body: JSON.stringify({
-                action: "submitLog",
-                sid: currentStudent.sid,
-                name: currentStudent.name,
-                className: currentStudent.className,
-                classNumber: currentStudent.classNumber,
-                score: "1/1", 
-                status: `Passed [${q.id}] (${q.level})`
-            })
+            body: JSON.stringify({ action: "studentLogin", sid: sid })
         })
         .then(r => r.json())
         .then(data => {
-            if(data.status === "success") {
-                logStatus.className = "result-msg success";
-                logStatus.innerHTML = `👍 紀錄成功！已同步至雲端（難度：${q.level}）`;
-                
-                // 自動跳到該難度的下一題
-                setTimeout(() => {
-                    currentIndex = (currentIndex + 1) % filteredSentences.length;
-                    showQuestion();
-                }, 2000);
+            if (data.status === "success") {
+                currentStudent = { sid: sid, name: data.student.name, className: data.student.className, classNumber: data.student.classNumber };
+                mySentences = data.sentences;
+
+                // 切換介面
+                document.getElementById("loginSection").classList.add("hidden");
+                document.getElementById("mainSection").classList.remove("hidden");
+
+                document.getElementById("displayStudent").innerText = `學生：${currentStudent.name}`;
+                document.getElementById("displayClass").innerText = `班別：${currentStudent.className} (${currentStudent.classNumber}號)`;
+
+                renderVocabList();
             } else {
-                logStatus.className = "result-msg error";
-                logStatus.innerHTML = "上傳失敗: " + data.message;
+                statusDiv.innerHTML = data.message;
             }
         })
         .catch(err => {
-            logStatus.className = "result-msg error";
-            logStatus.innerHTML = "網路錯誤，無法上傳紀錄: " + err;
+            statusDiv.innerHTML = "連線失敗，請檢查網路或 GAS 網址。";
+            console.error(err);
+        });
+    }
+
+    // 2. 渲染純紙筆溫習的生字清單
+    function renderVocabList() {
+        const container = document.getElementById("vocabList");
+        container.innerHTML = "";
+
+        if (mySentences.length === 0) {
+            container.innerHTML = "<p style='color:#7f8c8d; text-align:center;'>老師目前尚未在此難度為你錄入題目。</p>";
+            document.getElementById("btnJoinQueue").classList.add("hidden");
+            return;
+        }
+
+        mySentences.forEach((s, index) => {
+            const div = document.createElement("div");
+            div.className = "vocab-item clearfix";
+            
+            // 這裡把 FullSentence 完整顯示，並提供發音，方便學生看著它在紙上默寫溫習
+            div.innerHTML = `
+                <button class="btn-audio" onclick="speakText('${s.full.replace(/'/g, "\\'")}')">🔊 聽讀音</button>
+                <div class="vocab-words">${s.full}</div>
+                <div class="vocab-chinese">提示：${s.chinese}</div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    // 3. 原生免費發音
+    function speakText(text) {
+        window.speechSynthesis.cancel(); // 停止之前的發音
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.85; // 稍慢速，適合溫習
+        window.speechSynthesis.speak(utterance);
+    }
+
+    // 4. 點擊我準備好默書：進入排隊
+    function requestQueue() {
+        if (!currentStudent) return;
+        if (!confirm("確定已經記熟生字，要進入講台默書排隊名單嗎？\n進入後介面將會鎖定。")) return;
+
+        const btn = document.getElementById("btnJoinQueue");
+        btn.disabled = true;
+        btn.innerText = "正在進入排隊區...";
+
+        fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "joinQueue", sid: currentStudent.sid })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === "success") {
+                // 鎖定畫面，進入排隊等待狀態
+                document.getElementById("mainSection").classList.add("hidden");
+                document.getElementById("queueSection").classList.remove("hidden");
+                document.getElementById("queueUserBar").innerText = `${currentStudent.className}班 ${currentStudent.name} 同學`;
+            } else {
+                alert("排隊出錯：" + data.message);
+                btn.disabled = false;
+                btn.innerText = "我已記熟，準備好默書了 🚀";
+            }
+        })
+        .catch(err => {
+            alert("網路錯誤，無法排隊。");
+            btn.disabled = false;
+            btn.innerText = "我已記熟，準備好默書了 🚀";
         });
     }
 </script>
