@@ -41,7 +41,7 @@
 <body>
 
 <div class="container">
-    <h2>🎯 NVN 句子溫習系統</h2>
+    <h2>V1.01🎯 NVN 句子溫習系統</h2>
 
     <!-- 登入區 -->
     <div id="loginSection" class="card">
@@ -84,7 +84,17 @@
     </div>
 </div>
 
+    
+    <div id="passSection" class="hidden" style="background-color: #e6fffa; border: 2px solid #319795; text-align: center; padding: 40px; border-radius: 12px; margin-top: 20px;">
+        <h2 style="border:none; color: #234e52; margin-bottom:15px;">🎉 恭喜你！挑戰成功！</h2>
+        <div style="font-size: 70px; margin: 20px 0;">🔓</div>
+        <p style="font-size: 20px; color: #2d3748; font-weight: bold;">老師已批准你放學 / 進行下一階段活動！</p>
+        <p style="color: #4a5568; font-size: 15px;">請收拾好你的原子筆與草稿紙。</p>
+        <button onclick="backToLogin()" style="background-color: #319795; max-width: 200px; margin-top: 20px;">返回登入首頁</button>
+    </div>
+    
 <script>
+    let pollTimer = null; // 用來儲存定時檢查的計時器
     // ⚠️ 記得替換為你最新的 GAS Web App 網址
     const GAS_URL = "https://script.google.com/macros/s/AKfycbziG9ZuR_hPZMRsZ98sGIvRVQFDABO3L7uimBbI-6bLeR2hqmBLtUNoa6TqMHftNb6-jA/exec"; 
 
@@ -190,6 +200,10 @@
                 document.getElementById("mainSection").classList.add("hidden");
                 document.getElementById("queueSection").classList.remove("hidden");
                 document.getElementById("queueUserBar").innerText = `${currentStudent.className}班 ${currentStudent.name}`;
+                
+                // 🔴 【核心新增】排隊成功後，每隔 4 秒自動向後端查詢老師批改了沒有
+                pollTimer = setInterval(checkStatusFromServer, 4000);
+                
             } else {
                 alert("排隊出錯：" + data.message);
                 btn.disabled = false;
@@ -201,6 +215,53 @@
             btn.disabled = false;
             btn.innerText = "我已記熟，準備好默書了 🚀";
         });
+    }
+
+    // 🔴 【核心新增】定時檢查狀態的函數
+    function checkStatusFromServer() {
+        if (!currentStudent) return;
+        
+        fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "checkStatus", sid: currentStudent.sid })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === "success") {
+                // A情況：老師按了 Pass
+                if (data.queueStatus.includes("Pass")) {
+                    clearInterval(pollTimer); // 停止偵測
+                    document.getElementById("queueSection").classList.add("hidden");
+                    document.getElementById("passSection").classList.remove("hidden");
+                } 
+                // B情況：老師按了 Fail
+                else if (data.queueStatus.includes("Fail")) {
+                    clearInterval(pollTimer); // 停止偵測
+                    alert("❌ 這次未能完全合格，不要緊！\n回座位看清楚結構，再挑戰一次！");
+                    
+                    document.getElementById("queueSection").classList.add("hidden");
+                    document.getElementById("mainSection").classList.remove("hidden");
+                    
+                    // 重新啟用排隊按鈕
+                    const btn = document.getElementById("btnJoinQueue");
+                    btn.disabled = false;
+                    btn.innerText = "我已記熟，準備好默書了 🚀";
+                    
+                    // 自動重新偷偷登入，目的是更新溫習畫面（不論是維持原句還是被降級，都能拿到最新的句子）
+                    loginStudent(); 
+                }
+            }
+        })
+        .catch(err => console.log("偵測連線中..."));
+    }
+
+    // 🔴 【核心新增】點擊返回首頁
+    function backToLogin() {
+        document.getElementById("passSection").classList.add("hidden");
+        document.getElementById("loginSection").classList.remove("hidden");
+        document.getElementById("studentSid").value = "";
+        currentStudent = null;
+        mySentences = [];
     }
 </script>
 </body>
