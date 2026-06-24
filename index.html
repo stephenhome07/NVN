@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V1.04 NVN 句子溫習系統 (學生端)</title>
+    <title>V1.05 NVN 句子溫習系統 (學生端)</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; background-color: #f4f6f7; color: #333; }
         .container { max-width: 650px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin: 0 auto; }
@@ -152,8 +152,7 @@
         if(!sid) { alert("請輸入學校電郵！"); return; }
         if(!room) { alert("請選擇你目前前往的課室！"); return; }
         
-        // 恢復原版文字
-        statusDiv.innerHTML = "正在載入你的專屬溫習題...";
+        statusDiv.innerHTML = "正在載入你的專專屬溫習題...";
 
         fetch(GAS_URL, {
             method: "POST",
@@ -162,7 +161,7 @@
         .then(r => r.json())
         .then(data => {
             if (data.status === "success") {
-                // 🌟【新增機制】如果後台發現這個電郵此時「正在排隊中」，直接拉去排隊倒數畫面！
+                // 斷線自動重連攔截機制
                 if (data.alreadyInQueue) {
                     currentStudent = { sid: sid, name: data.student.name, className: data.student.className, classNumber: data.student.classNumber, room: data.room };
                     document.getElementById("loginSection").classList.add("hidden");
@@ -174,7 +173,6 @@
                     return;
                 }
 
-                // 正常登入邏輯
                 currentStudent = { sid: sid, name: data.student.name, className: data.student.className, classNumber: data.student.classNumber, room: room };
                 mySentences = data.sentences;
 
@@ -184,7 +182,6 @@
                 document.getElementById("displayStudent").innerText = `學生：${currentStudent.name}`;
                 document.getElementById("displayClass").innerText = `班別：${currentStudent.className} (${currentStudent.classNumber}號)`;
 
-                // 確保如果有題目，按鈕要顯示出來 (避免上一位學生沒有題目隱藏了按鈕)
                 document.getElementById("btnJoinQueue").classList.remove("hidden");
                 renderVocabList();
             } else {
@@ -200,7 +197,6 @@
         const container = document.getElementById("vocabList");
         container.innerHTML = "";
 
-        // 恢復原版防呆機制
         if (mySentences.length === 0) {
             container.innerHTML = "<p style='text-align:center;'>目前沒有題目。</p>";
             document.getElementById("btnJoinQueue").classList.add("hidden");
@@ -245,7 +241,6 @@
 
     function requestQueue() {
         if (!currentStudent) return;
-        // 恢復原版詳細提示文字
         if (!confirm(`確定準備好默書了嗎？\n系統將從這 ${globalSettings.revisionCount} 句中隨機抽 ${globalSettings.testCount} 句測驗喔！`)) return;
 
         const btn = document.getElementById("btnJoinQueue");
@@ -277,7 +272,6 @@
             }
         })
         .catch(err => {
-            // 🌟 加入針對 Timeout 的提示，即使斷線也把按鈕解鎖
             alert("網路錯誤或伺服器回應超時。\n若你已重新整理網頁，請嘗試重新登入查看排隊狀態。");
             btn.disabled = false;
             btn.innerText = "我已記熟，準備好默書了 🚀";
@@ -321,10 +315,13 @@
         document.getElementById("passSection").classList.add("hidden");
         document.getElementById("loginSection").classList.remove("hidden");
         document.getElementById("studentSid").value = "";
+        
+        // 🌟【徹底修復此 Bug】返回首頁時，主動把舊的登入提示字句清空
+        document.getElementById("loginStatus").innerHTML = ""; 
+        
         currentStudent = null;
         mySentences = [];
         
-        // 🔴【核心修正】返回首頁時，確保把溫習畫面的排隊按鈕狀態徹底還原
         const btn = document.getElementById("btnJoinQueue");
         if(btn) {
             btn.disabled = false;
