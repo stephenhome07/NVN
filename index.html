@@ -14,26 +14,36 @@
         button { background-color: #3498db; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
         button:hover { background-color: #2980b9; }
         .student-bar { background: #edf2f7; padding: 12px; border-radius: 8px; font-weight: bold; margin-bottom: 20px; display: flex; justify-content: space-between; font-size: 15px; }
-        .vocab-item { background: #f8fafc; border-left: 5px solid #9b59b6; padding: 12px; margin-bottom: 12px; border-radius: 0 6px 6px 0; }
-        .vocab-words { font-size: 18px; font-weight: bold; color: #2d3748; margin-bottom: 5px; letter-spacing: 0.5px; }
-        .vocab-chinese { font-size: 14px; color: #718096; }
-        .btn-audio { background-color: #9b59b6; width: auto; padding: 6px 12px; font-size: 14px; margin-top: 5px; border-radius: 4px; float: right; }
+        
+        /* 結構化區塊 CSS */
+        .vocab-item { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; margin-bottom: 15px; border-radius: 8px; position: relative; }
+        .nvn-row { display: flex; gap: 8px; margin-bottom: 12px; }
+        .nvn-box { flex: 1; padding: 8px; border-radius: 6px; text-align: center; color: white; }
+        .box-n1 { background-color: #3498db; } /* 藍色 主語 */
+        .box-v  { background-color: #e67e22; } /* 橘色 動詞 */
+        .box-n2 { background-color: #2ecc71; } /* 綠色 賓語 */
+        .box-label { font-size: 11px; opacity: 0.9; margin-bottom: 4px; font-weight: normal; }
+        .box-word { font-size: 17px; font-weight: bold; letter-spacing: 0.5px; }
+        
+        .vocab-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #cbd5e0; padding-top: 10px; }
+        .vocab-chinese { font-size: 15px; color: #4a5568; font-weight: bold; }
+        .btn-audio { background-color: #9b59b6; width: auto; padding: 8px 15px; font-size: 14px; border-radius: 6px; margin: 0; }
         .btn-audio:hover { background-color: #8e44ad; }
+        
         .btn-ready { background-color: #e67e22; font-size: 18px; padding: 18px; margin-top: 25px; box-shadow: 0 4px 10px rgba(230,126,34,0.3); }
         .btn-ready:hover { background-color: #d35400; }
         .msg { font-size: 16px; font-weight: bold; margin-top: 15px; text-align: center; }
         .error { color: #e53e3e; }
         .queue-box { background: #fff3cd; border: 2px dashed #ffc107; padding: 30px; text-align: center; border-radius: 12px; margin-top: 20px; }
         .hidden { display: none; }
-        .clearfix::after { content: ""; clear: both; display: table; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🎯 NVN 英語句子溫習系統</h2>
+    <h2>🎯 NVN 句子溫習系統</h2>
 
-    <!-- 1. 學生登入 -->
+    <!-- 登入區 -->
     <div id="loginSection" class="card">
         <label for="studentSid">請輸入你的學校電郵登入：</label>
         <input type="text" id="studentSid" placeholder="例如: s19010040@hoyu.edu.hk">
@@ -41,54 +51,52 @@
         <div id="loginStatus" class="msg error"></div>
     </div>
 
-    <!-- 2. 主溫習介面 -->
+    <!-- 溫習區 -->
     <div id="mainSection" class="hidden">
         <div class="student-bar">
             <span id="displayStudent">學生：---</span>
             <span id="displayClass">班別：---</span>
         </div>
 
-        <div class="card" style="background-color: #f0fff4; border-color: #c6f6d5;">
-            <p style="margin:0; font-weight:bold; color:#22543d; text-align:center;">
-                📝 溫習指引：請準備好白紙和原子筆。<br>一邊看著螢幕上的生字、一邊聽讀音，在紙上嘗試手寫練習！
+        <div class="card" style="background-color: #f0fff4; border-color: #c6f6d5; text-align: center;">
+            <p style="margin:0; font-weight:bold; color:#22543d;">
+                📝 溫習指引：今天系統為你挑選了 <span style="color:#e67e22; font-size:20px;">8</span> 句重點。<br>
+                請看清楚 <span style="color:#3498db;">主語</span>、<span style="color:#e67e22;">動詞</span>、<span style="color:#2ecc71;">賓語</span> 的結構，在白紙上手寫練習！
             </p>
         </div>
 
-        <h3>📚 今日溫習句子與生字庫</h3>
-        <div id="vocabList"><!-- 動態載入生字庫 --></div>
+        <div id="vocabList"><!-- 動態載入 N-V-N 區塊 --></div>
 
-        <!-- 我準備好默書按鈕 -->
         <button class="btn-ready" id="btnJoinQueue" onclick="requestQueue()">我已記熟，準備好默書了 🚀</button>
     </div>
 
-    <!-- 3. 排隊成功鎖定畫面 -->
+    <!-- 排隊區 -->
     <div id="queueSection" class="queue-box hidden">
         <h2 style="border:none; color:#d35400; margin-bottom:15px;">🔴 已進入排隊名單</h2>
         <p style="font-size: 18px; font-weight: bold; color: #2c3e50;" id="queueUserBar"></p>
         <p style="font-size: 16px; color: #7f8c8d; line-height: 1.6;">
-            系統已為你隨機抽選了今天的 5 句默書題目。<br>
+            系統已從你剛才溫習的 8 句中，隨機抽出了 <strong style="color: #e74c3c; font-size: 20px;">4 句</strong> 作為測試。<br><br>
             <strong style="color: #e74c3c; font-size: 18px;">請現在放下 iPad，只拿著你的「白紙」和「筆」，</strong><br>
-            走到講台排隊找老師開始默書測試！
+            走到講台找老師開始默寫！
         </p>
         <div style="font-size: 50px; margin: 20px 0;">⏳</div>
-        <p style="color: #7f8c8d; font-size: 13px;">（請勿關閉或重新整理此網頁，默書完畢後老師會為你解鎖）</p>
+        <p style="color: #7f8c8d; font-size: 13px;">（請勿關閉網頁，測驗完畢後老師會為你解鎖）</p>
     </div>
 </div>
 
 <script>
-    // ⚠️ 請確認這是你最新的 GAS Web App 網址
+    // ⚠️ 記得替換為你最新的 GAS Web App 網址
     const GAS_URL = "https://script.google.com/macros/s/AKfycbziG9ZuR_hPZMRsZ98sGIvRVQFDABO3L7uimBbI-6bLeR2hqmBLtUNoa6TqMHftNb6-jA/exec"; 
 
     let currentStudent = null;
     let mySentences = [];
 
-    // 1. 學生秘密登入
     function loginStudent() {
         const sid = document.getElementById("studentSid").value.trim();
         const statusDiv = document.getElementById("loginStatus");
         if(!sid) { alert("請輸入學校電郵！"); return; }
         
-        statusDiv.innerHTML = "正在連線載入你的個人溫習庫...";
+        statusDiv.innerHTML = "正在載入你的專屬溫習題...";
 
         fetch(GAS_URL, {
             method: "POST",
@@ -100,7 +108,6 @@
                 currentStudent = { sid: sid, name: data.student.name, className: data.student.className, classNumber: data.student.classNumber };
                 mySentences = data.sentences;
 
-                // 切換介面
                 document.getElementById("loginSection").classList.add("hidden");
                 document.getElementById("mainSection").classList.remove("hidden");
 
@@ -114,52 +121,64 @@
         })
         .catch(err => {
             statusDiv.innerHTML = "連線失敗，請檢查網路或 GAS 網址。";
-            console.error(err);
         });
     }
 
-    // 2. 渲染純紙筆溫習的生字清單
+    // 渲染彩色的 N-V-N 區塊
     function renderVocabList() {
         const container = document.getElementById("vocabList");
         container.innerHTML = "";
 
         if (mySentences.length === 0) {
-            container.innerHTML = "<p style='color:#7f8c8d; text-align:center;'>老師目前尚未在此難度為你錄入題目。</p>";
+            container.innerHTML = "<p style='text-align:center;'>目前沒有題目。</p>";
             document.getElementById("btnJoinQueue").classList.add("hidden");
             return;
         }
 
         mySentences.forEach((s, index) => {
             const div = document.createElement("div");
-            div.className = "vocab-item clearfix";
+            div.className = "vocab-item";
             
-            // 這裡把 FullSentence 完整顯示，並提供發音，方便學生看著它在紙上默寫溫習
+            // 這裡使用了 Flexbox 將 N1, V, N2 拆分成獨立顏色區塊
             div.innerHTML = `
-                <button class="btn-audio" onclick="speakText('${s.full.replace(/'/g, "\\'")}')">🔊 聽讀音</button>
-                <div class="vocab-words">${s.full}</div>
-                <div class="vocab-chinese">提示：${s.chinese}</div>
+                <div class="nvn-row">
+                    <div class="nvn-box box-n1">
+                        <div class="box-label">主語 Noun</div>
+                        <div class="box-word">${s.n1}</div>
+                    </div>
+                    <div class="nvn-box box-v">
+                        <div class="box-label">動詞 Verb</div>
+                        <div class="box-word">${s.v}</div>
+                    </div>
+                    <div class="nvn-box box-n2">
+                        <div class="box-label">賓語 Noun</div>
+                        <div class="box-word">${s.n2}</div>
+                    </div>
+                </div>
+                <div class="vocab-footer">
+                    <div class="vocab-chinese">📌 提示：${s.chinese}</div>
+                    <button class="btn-audio" onclick="speakText('${s.full.replace(/'/g, "\\'")}')">🔊 聽整句讀音</button>
+                </div>
             `;
             container.appendChild(div);
         });
     }
 
-    // 3. 原生免費發音
     function speakText(text) {
-        window.speechSynthesis.cancel(); // 停止之前的發音
+        window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'en-US';
-        utterance.rate = 0.85; // 稍慢速，適合溫習
+        utterance.rate = 0.85; 
         window.speechSynthesis.speak(utterance);
     }
 
-    // 4. 點擊我準備好默書：進入排隊
     function requestQueue() {
         if (!currentStudent) return;
-        if (!confirm("確定已經記熟生字，要進入講台默書排隊名單嗎？\n進入後介面將會鎖定。")) return;
+        if (!confirm("確定準備好默書了嗎？\n系統將從這 8 句中隨機抽 4 句測驗喔！")) return;
 
         const btn = document.getElementById("btnJoinQueue");
         btn.disabled = true;
-        btn.innerText = "正在進入排隊區...";
+        btn.innerText = "正在抽題與排隊...";
 
         fetch(GAS_URL, {
             method: "POST",
@@ -168,10 +187,9 @@
         .then(r => r.json())
         .then(data => {
             if (data.status === "success") {
-                // 鎖定畫面，進入排隊等待狀態
                 document.getElementById("mainSection").classList.add("hidden");
                 document.getElementById("queueSection").classList.remove("hidden");
-                document.getElementById("queueUserBar").innerText = `${currentStudent.className}班 ${currentStudent.name} 同學`;
+                document.getElementById("queueUserBar").innerText = `${currentStudent.className}班 ${currentStudent.name}`;
             } else {
                 alert("排隊出錯：" + data.message);
                 btn.disabled = false;
@@ -179,7 +197,7 @@
             }
         })
         .catch(err => {
-            alert("網路錯誤，無法排隊。");
+            alert("網路錯誤，請重試。");
             btn.disabled = false;
             btn.innerText = "我已記熟，準備好默書了 🚀";
         });
