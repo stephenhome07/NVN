@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V1.00 NVN 句子溫習系統 (學生端)</title>
+    <title>V1.02 NVN 句子溫習系統 (學生端)</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; background-color: #f4f6f7; color: #333; }
         .container { max-width: 650px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin: 0 auto; }
         h2 { color: #2c3e50; margin-top: 0; text-align: center; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
         .card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #fff; }
         label { font-weight: bold; display: block; margin: 10px 0 5px; color: #4a5568; }
-        input, button { width: 100%; padding: 14px; box-sizing: border-box; border-radius: 8px; border: 1px solid #cbd5e0; font-size: 16px; }
+        input, select, button { width: 100%; padding: 14px; box-sizing: border-box; border-radius: 8px; border: 1px solid #cbd5e0; font-size: 16px; }
         button { background-color: #3498db; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
         button:hover { background-color: #2980b9; }
         .student-bar { background: #edf2f7; padding: 12px; border-radius: 8px; font-weight: bold; margin-bottom: 20px; display: flex; justify-content: space-between; font-size: 15px; }
@@ -41,17 +41,21 @@
 <body>
 
 <div class="container">
-    <h2>V1.01🎯 NVN 句子溫習系統</h2>
+    <h2>V1.02🎯 NVN 句子溫習系統</h2>
 
-    <!-- 登入區 -->
     <div id="loginSection" class="card">
         <label for="studentSid">請輸入你的學校電郵登入：</label>
         <input type="text" id="studentSid" placeholder="例如: s19010040@hoyu.edu.hk">
-        <button onclick="loginStudent()" style="margin-top: 15px;">開始溫習</button>
+        
+        <label for="studentRoom" style="color: #2c3e50; font-size: 15px; margin-top: 15px;">📍 請選擇你正前往哪一個課室搵老師默寫：</label>
+        <select id="studentRoom" style="font-weight: bold; color: #2d3748; background: white;">
+            <option value="">正在連線獲取課室名單...</option>
+        </select>
+
+        <button onclick="loginStudent()" style="margin-top: 20px;">開始溫習</button>
         <div id="loginStatus" class="msg error"></div>
     </div>
 
-    <!-- 溫習區 -->
     <div id="mainSection" class="hidden">
         <div class="student-bar">
             <span id="displayStudent">學生：---</span>
@@ -60,22 +64,21 @@
 
         <div class="card" style="background-color: #f0fff4; border-color: #c6f6d5; text-align: center;">
             <p style="margin:0; font-weight:bold; color:#22543d;">
-                📝 溫習指引：今天系統為你挑選了 <span style="color:#e67e22; font-size:20px;">8</span> 句重點。<br>
+                📝 溫習指引：今天系統為你挑選了 <span id="displayRevCount" style="color:#e67e22; font-size:20px;">8</span> 句重點。<br>
                 請看清楚 <span style="color:#3498db;">主語</span>、<span style="color:#e67e22;">動詞</span>、<span style="color:#2ecc71;">賓語</span> 的結構，在白紙上手寫練習！
             </p>
         </div>
 
-        <div id="vocabList"><!-- 動態載入 N-V-N 區塊 --></div>
+        <div id="vocabList"></div>
 
         <button class="btn-ready" id="btnJoinQueue" onclick="requestQueue()">我已記熟，準備好默書了 🚀</button>
     </div>
 
-    <!-- 排隊區 -->
     <div id="queueSection" class="queue-box hidden">
         <h2 style="border:none; color:#d35400; margin-bottom:15px;">🔴 已進入排隊名單</h2>
         <p style="font-size: 18px; font-weight: bold; color: #2c3e50;" id="queueUserBar"></p>
         <p style="font-size: 16px; color: #7f8c8d; line-height: 1.6;">
-            系統已從你剛才溫習的 8 句中，隨機抽出了 <strong style="color: #e74c3c; font-size: 20px;">4 句</strong> 作為測試。<br><br>
+            系統已從你剛才溫習的 <span id="queueRevCount">8</span> 句中，隨機抽出了 <strong id="queueTestCount" style="color: #e74c3c; font-size: 20px;">4 句</strong> 作為測試。<br><br>
             <strong style="color: #e74c3c; font-size: 18px;">請現在放下 iPad，只拿著你的「白紙」和「筆」，</strong><br>
             走到講台找老師開始默寫！
         </p>
@@ -94,28 +97,78 @@
     </div>
     
 <script>
-    let pollTimer = null; // 用來儲存定時檢查的計時器
+    let pollTimer = null; 
     // ⚠️ 記得替換為你最新的 GAS Web App 網址
     const GAS_URL = "https://script.google.com/macros/s/AKfycbziG9ZuR_hPZMRsZ98sGIvRVQFDABO3L7uimBbI-6bLeR2hqmBLtUNoa6TqMHftNb6-jA/exec"; 
 
     let currentStudent = null;
     let mySentences = [];
+    
+    // 🔴 【核心新增】用來儲存從後端 Settings 抓到的動態設定值（預設值為 8 和 4）
+    let globalSettings = { rooms: [], revisionCount: 8, testCount: 4 };
+
+    // 🔴 【核心新增】網頁載入時自動執行初始化，抓取 Settings 內容
+    window.onload = function() {
+        initSystem();
+    };
+
+    function initSystem() {
+        const roomSelect = document.getElementById("studentRoom");
+        
+        fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "getInitData" })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === "success") {
+                globalSettings = data.settings;
+                
+                // 動態渲染課室下拉選單
+                roomSelect.innerHTML = "";
+                if (globalSettings.rooms && globalSettings.rooms.length > 0) {
+                    globalSettings.rooms.forEach(room => {
+                        const opt = document.createElement("option");
+                        opt.value = room;
+                        opt.innerText = room + " 課室";
+                        roomSelect.appendChild(opt);
+                    });
+                } else {
+                    roomSelect.innerHTML = '<option value="">(Excel未設定課室)</option>';
+                }
+
+                // 動態更新介面上的提示數字
+                document.getElementById("displayRevCount").innerText = globalSettings.revisionCount;
+                document.getElementById("queueRevCount").innerText = globalSettings.revisionCount;
+                document.getElementById("queueTestCount").innerText = globalSettings.testCount + " 句";
+            } else {
+                roomSelect.innerHTML = '<option value="">載入失敗：' + data.message + '</option>';
+            }
+        })
+        .catch(err => {
+            roomSelect.innerHTML = '<option value="">連線失敗，請檢查網路或 GAS 網址</option>';
+        });
+    }
 
     function loginStudent() {
         const sid = document.getElementById("studentSid").value.trim();
+        const room = document.getElementById("studentRoom").value;
         const statusDiv = document.getElementById("loginStatus");
+        
         if(!sid) { alert("請輸入學校電郵！"); return; }
+        if(!room) { alert("請選擇你目前前往的課室！"); return; }
         
         statusDiv.innerHTML = "正在載入你的專屬溫習題...";
 
         fetch(GAS_URL, {
             method: "POST",
-            body: JSON.stringify({ action: "studentLogin", sid: sid })
+            // 🔴 將從 Settings 分頁拿到的 revisionCount 帶入傳送
+            body: JSON.stringify({ action: "studentLogin", sid: sid, revisionCount: globalSettings.revisionCount })
         })
         .then(r => r.json())
         .then(data => {
             if (data.status === "success") {
-                currentStudent = { sid: sid, name: data.student.name, className: data.student.className, classNumber: data.student.classNumber };
+                currentStudent = { sid: sid, name: data.student.name, className: data.student.className, classNumber: data.student.classNumber, room: room };
                 mySentences = data.sentences;
 
                 document.getElementById("loginSection").classList.add("hidden");
@@ -149,7 +202,6 @@
             const div = document.createElement("div");
             div.className = "vocab-item";
             
-            // 這裡使用了 Flexbox 將 N1, V, N2 拆分成獨立顏色區塊
             div.innerHTML = `
                 <div class="nvn-row">
                     <div class="nvn-box box-n1">
@@ -184,7 +236,8 @@
 
     function requestQueue() {
         if (!currentStudent) return;
-        if (!confirm("確定準備好默書了嗎？\n系統將從這 8 句中隨機抽 4 句測驗喔！")) return;
+        // 🔴 提示訊息也改為動態動態顯示設定的數字
+        if (!confirm(`確定準備好默書了嗎？\n系統將從這 ${globalSettings.revisionCount} 句中隨機抽 ${globalSettings.testCount} 句測驗喔！`)) return;
 
         const btn = document.getElementById("btnJoinQueue");
         btn.disabled = true;
@@ -192,16 +245,21 @@
 
         fetch(GAS_URL, {
             method: "POST",
-            body: JSON.stringify({ action: "joinQueue", sid: currentStudent.sid })
+            // 🔴 這裡直接抓取登入時就存好的課室 (currentStudent.room) 以及 Settings 裡的 testCount 傳給 GAS
+            body: JSON.stringify({ 
+                action: "joinQueue", 
+                sid: currentStudent.sid, 
+                room: currentStudent.room,
+                testCount: globalSettings.testCount 
+            })
         })
         .then(r => r.json())
         .then(data => {
             if (data.status === "success") {
                 document.getElementById("mainSection").classList.add("hidden");
                 document.getElementById("queueSection").classList.remove("hidden");
-                document.getElementById("queueUserBar").innerText = `${currentStudent.className}班 ${currentStudent.name}`;
+                document.getElementById("queueUserBar").innerText = `${currentStudent.className}班 ${currentStudent.name} (前往：${currentStudent.room}課室)`;
                 
-                // 🔴 【核心新增】排隊成功後，每隔 4 秒自動向後端查詢老師批改了沒有
                 pollTimer = setInterval(checkStatusFromServer, 4000);
                 
             } else {
@@ -217,7 +275,6 @@
         });
     }
 
-    // 🔴 【核心新增】定時檢查狀態的函數
     function checkStatusFromServer() {
         if (!currentStudent) return;
         
@@ -228,26 +285,22 @@
         .then(r => r.json())
         .then(data => {
             if (data.status === "success") {
-                // A情況：老師按了 Pass
                 if (data.queueStatus.includes("Pass")) {
-                    clearInterval(pollTimer); // 停止偵測
+                    clearInterval(pollTimer); 
                     document.getElementById("queueSection").classList.add("hidden");
                     document.getElementById("passSection").classList.remove("hidden");
                 } 
-                // B情況：老師按了 Fail
                 else if (data.queueStatus.includes("Fail")) {
-                    clearInterval(pollTimer); // 停止偵測
+                    clearInterval(pollTimer); 
                     alert("❌ 這次未能完全合格，不要緊！\n回座位看清楚結構，再挑戰一次！");
                     
                     document.getElementById("queueSection").classList.add("hidden");
                     document.getElementById("mainSection").classList.remove("hidden");
                     
-                    // 重新啟用排隊按鈕
                     const btn = document.getElementById("btnJoinQueue");
                     btn.disabled = false;
                     btn.innerText = "我已記熟，準備好默書了 🚀";
                     
-                    // 自動重新偷偷登入，目的是更新溫習畫面（不論是維持原句還是被降級，都能拿到最新的句子）
                     loginStudent(); 
                 }
             }
@@ -255,13 +308,14 @@
         .catch(err => console.log("偵測連線中..."));
     }
 
-    // 🔴 【核心新增】點擊返回首頁
     function backToLogin() {
         document.getElementById("passSection").classList.add("hidden");
         document.getElementById("loginSection").classList.remove("hidden");
         document.getElementById("studentSid").value = "";
         currentStudent = null;
         mySentences = [];
+        // 重新初始化抓取最新設定
+        initSystem();
     }
 </script>
 </body>
