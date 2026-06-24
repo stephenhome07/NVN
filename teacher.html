@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NVN 總司令講台控制面板 (教師端)</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background-color: #1a202c; color: #edf2f7; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 { color: #63b3ed; text-align: center; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #a0aec0; margin-bottom: 25px; font-size: 14px; }
+        
+        /* 正在測試的聚焦視窗 */
+        .focus-card { background: #2d3748; border: 3px solid #4299e1; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .focus-title { font-size: 22px; font-weight: bold; color: #fbd38d; border-bottom: 1px solid #4a5568; padding-bottom: 10px; margin-bottom: 15px; }
+        .test-question { background: #1a202c; padding: 15px; border-radius: 8px; margin-bottom: 12px; border-left: 6px solid #48bb78; }
+        .eng-ans { font-size: 20px; font-weight: bold; color: #fff; letter-spacing: 0.5px; }
+        .chi-hint { font-size: 16px; color: #cbd5e0; margin-top: 5px; font-style: italic; }
+        
+        /* 老師控制按鈕 */
+        .control-row { display: flex; gap: 15px; align-items: center; margin-top: 20px; background: #232d3f; padding: 15px; border-radius: 8px; }
+        .level-select { padding: 12px; font-size: 16px; border-radius: 6px; background: #4a5568; color: white; border: none; font-weight: bold; }
+        .btn { padding: 14px 28px; font-size: 18px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; transition: 0.2s; }
+        .btn-pass { background-color: #48bb78; color: white; flex: 2; }
+        .btn-pass:hover { background-color: #38a169; }
+        .btn-fail { background-color: #e53e3e; color: white; flex: 1; }
+        .btn-fail:hover { background-color: #c53030; }
+        
+        /* 排隊表格 */
+        .queue-table { width: 100%; border-collapse: collapse; background: #2d3748; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .queue-table th { background-color: #4a5568; color: #ebf8ff; padding: 15px; text-align: left; font-size: 16px; }
+        .queue-table td { padding: 15px; border-bottom: 1px solid #4a5568; font-size: 16px; }
+        .queue-table tr:hover { background-color: #3a4659; cursor: pointer; }
+        
+        .badge-live { background-color: #f56565; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; animation: blink 1.5s infinite; }
+        .badge-lv { background-color: #ed8936; color: white; padding: 3px 8px; border-radius: 4px; font-size: 13px; font-weight: bold; }
+        
+        @keyframes blink { 0% {opacity: 1;} 50% {opacity: 0.4;} 100% {opacity: 1;} }
+        .empty-msg { text-align: center; color: #a0aec0; padding: 40px; font-size: 18px; }
+        .refresh-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>👨‍🏫 NVN 總司令講台控制面板</h1>
+    <div class="subtitle">HO YU COLLEGE • 英語純紙筆默寫即時批改系統</div>
+
+    <div id="focusArea" class="focus-card" style="display: none;">
+        <div class="focus-title">
+            🔊 正在測試：<span id="fStudent" style="color:#63b3ed;">---</span> 
+            <span style="font-size:14px; color:#a0aec0; margin-left:15px;" id="fSid"></span>
+        </div>
+        
+        <p style="color:#a0aec0; margin:0 0 10px 0; font-size:14px;">💡 講台提示：你可以口頭讀出中文提示，或者將螢幕面向學生給予視覺提示。核對學生手寫答案是否與白色英文一致。</p>
+        
+        <div id="testQuestionsContainer"></div>
+
+        <div class="control-row">
+            <label style="font-weight:bold; color:#cbd5e0;">🤫 秘密評級調整：</label>
+            <select id="actionLevel" class="level-select">
+                <option value="LV1">LV1: 香港小一至小三</option>
+                <option value="LV2">LV2: 香港小四至小六</option>
+                <option value="LV3">LV3: 香港中一至中二</option>
+                <option value="LV4">LV4: 香港中三至中四</option>
+                <option value="LV5">LV5: 香港中五至中六</option>
+                <option value="LV6">LV6: 大學用 / 高階</option>
+            </select>
+            
+            <button class="btn btn-pass" onclick="submitAssessment('Pass')">🎉 合格 (PASS) / 准予放學</button>
+            <button class="btn btn-fail" onclick="submitAssessment('Fail')">❌ 不合格 (FAIL) / 回位重練</button>
+        </div>
+    </div>
+
+    <div class="refresh-bar">
+        <h3>🔴 講台前排隊名單 (<span id="queueCount">0</span> 人正在等候)</h3>
+        <button onclick="fetchQueue()" style="background:#4a5568; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer; font-weight:bold;">🔄 手動重整</button>
+    </div>
+    
+    <table class="queue-table">
+        <thead>
+            <tr>
+                <th width="10%">狀態</th>
+                <th width="15%">班別 (學號)</th>
+                <th width="20%">學生姓名</th>
+                <th width="20%">目前秘密級別</th>
+                <th width="35%">操作</th>
+            </tr>
+        </thead>
+        <tbody id="queueTableBody">
+            <tr><td colspan="5" class="empty-msg">正在連線至雲端獲取名單...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // ⚠️ 必須填入與學生端一模一樣的 GAS Web App 網址！
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbziG9ZuR_hPZMRsZ98sGIvRVQFDABO3L7uimBbI-6bLeR2hqmBLtUNoa6TqMHftNb6-jA/exec"; 
+
+    let currentQueue = [];
+    let selectedStudent = null;
+
+    // 頁面開啟自動載入，並設定每 6 秒自動重新撈取名單
+    window.onload = function() {
+        fetchQueue();
+        setInterval(fetchQueue, 6000); 
+    };
+
+    // 從 Google Sheet 撈取所有「排隊中」的學生
+    function fetchQueue() {
+        fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "getQueue" })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if(data.status === "success") {
+                currentQueue = data.queue;
+                renderQueueTable();
+            }
+        })
+        .catch(err => console.error("撈取排隊名單失敗:", err));
+    }
+
+    // 渲染排隊表格
+    function renderQueueTable() {
+        const tbody = document.getElementById("queueTableBody");
+        document.getElementById("queueCount").innerText = currentQueue.length;
+        
+        if(currentQueue.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">☕ 目前沒有學生在排隊，大家正在座位用紙筆練習中。</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = "";
+        currentQueue.forEach(student => {
+            const tr = document.createElement("tr");
+            // 點擊整行，立刻把該學生拉上「聚焦測試核心區」
+            tr.onclick = () => selectStudentForTest(student);
+            
+            tr.innerHTML = `
+                <td><span class="badge-live">等待中</span></td>
+                <td><strong>${student.className}班</strong> (${student.classNumber}號)</td>
+                <td><span style="font-size:18px; font-weight:bold; color:#63b3ed;">${student.name}</span></td>
+                <td><span class="badge-lv">${student.level}</span></td>
+                <td><button style="background:#3182ce; color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:bold;">🎯 開始測試</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // 當老師點選某個學生，進入講台測試狀態
+    function selectStudentForTest(student) {
+        selectedStudent = student;
+        
+        // 顯示聚焦卡片
+        document.getElementById("focusArea").style.display = "block";
+        document.getElementById("fStudent").innerText = `${student.className}班 ${student.name}`;
+        document.getElementById("fSid").innerText = `(電郵: ${student.sid})`;
+        
+        // 預先將「秘密改級」下拉選單預設為他目前的 Level
+        document.getElementById("actionLevel").value = student.level;
+
+        // 解析並渲染 4 句抽考題（將 ||| 拆開成英文與中文）
+        const container = document.getElementById("testQuestionsContainer");
+        container.innerHTML = "";
+
+        const questionFields = [student.s1, student.s2, student.s3, student.s4];
+        let count = 1;
+
+        questionFields.forEach(rawField => {
+            if (!rawField) return;
+            const parts = rawField.split(" ||| ");
+            const english = parts[0];
+            const chinese = parts[1] || "暫無中文提示";
+
+            const qDiv = document.createElement("div");
+            qDiv.className = "test-question";
+            qDiv.innerHTML = `
+                <div class="eng-ans">第 ${count} 句：${english}</div>
+                <div class="chi-hint">📢 中文提示：${chinese}</div>
+            `;
+            container.appendChild(qDiv);
+            count++;
+        });
+        
+        // 滾動到最上方方便看題
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // 老師點擊「合格」或「不合格」
+    function submitAssessment(status) {
+        if (!selectedStudent) return;
+        
+        const targetLevel = document.getElementById("actionLevel").value;
+        const confirmMsg = `確定要為 ${selectedStudent.name} 送出【${status === 'Pass' ? '合格 🟢' : '不合格 🔴'}】嗎？\n該生難度級別將設定為：${targetLevel}`;
+        
+        if (!confirm(confirmMsg)) return;
+
+        // 隱藏聚焦區，防止重複點擊
+        document.getElementById("focusArea").style.display = "none";
+
+        fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify({
+                action: "submitResult",
+                sid: selectedStudent.sid,
+                resultStatus: status,
+                targetLevel: targetLevel
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === "success") {
+                selectedStudent = null;
+                fetchQueue(); // 重新整理名單
+            } else {
+                alert("後端出錯：" + data.message);
+            }
+        })
+        .catch(err => {
+            alert("網路錯誤，無法提交成績。");
+        });
+    }
+</script>
+</body>
+</html>
