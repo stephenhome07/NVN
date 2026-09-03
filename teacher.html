@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NVN 總司令講台控制面板 (教師端) V1.07</title>
+    <title>NVN 總司令講台控制面板 (教師端) V1.08</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background-color: #1a202c; color: #edf2f7; }
         .container { max-width: 1000px; margin: 0 auto; }
@@ -121,6 +121,14 @@
         </div>
         <p style="color:#a0aec0; font-size:13px; margin:-5px 0 15px 0;">系統約每 60 秒自動更新一次。建議在叫名前手動按「立即更新名單」。</p>
         
+        <!-- Export 當日紀錄 -->
+        <div style="background:#232d3f; padding:15px 18px; border-radius:8px; margin-bottom:20px; display:flex; flex-wrap:wrap; align-items:center; gap:12px; border:1px solid #4a5568;">
+            <span style="font-weight:bold; color:#63b3ed;">📥 匯出當日紀錄：</span>
+            <input type="date" id="exportDate" style="padding:10px 12px; font-size:15px; border-radius:6px; background:#1a202c; color:white; border:1px solid #4a5568;">
+            <button class="btn" style="background:#38a169; color:white; padding:10px 20px; font-size:15px; width:auto;" onclick="exportDailyRecords()">下載 CSV</button>
+            <span style="color:#a0aec0; font-size:13px;">欄位：Class, ClassNumber, Name, Record (Pass/Fail), Attempts</span>
+        </div>
+        
         <table class="queue-table">
             <thead>
                 <tr>
@@ -149,6 +157,12 @@
     const POLL_INTERVAL = 60000; // 60 秒
 
     window.onload = function() {
+        // 預設匯出日期為今天
+        const dateInput = document.getElementById("exportDate");
+        if (dateInput) {
+            const today = new Date();
+            dateInput.value = today.getFullYear() + "-" + String(today.getMonth()+1).padStart(2,"0") + "-" + String(today.getDate()).padStart(2,"0");
+        }
         loadInitSettings();
     };
 
@@ -390,6 +404,7 @@
         
         let targetLevel = document.getElementById("actionLevel").value;
         let finalConfirm = "";
+        let forceClearBatch = false; // 超過 1 小時 FAIL 時強制清除 Batch
 
         if (status === "Pass") {
             const isFirstFast = confirm("【正式確認 - 合格】\n\n該生是否「第一次出來默寫」並且「在 30 分鐘內完成」？\n\n按「確定」= 是（將自動升一級）\n按「取消」= 否（維持原級別）");
@@ -401,12 +416,15 @@
                 finalConfirm = `確定為 ${selectedStudent.name} 送出【合格 (PASS)】並維持 ${targetLevel}？`;
             }
         } else {
-            const isOver1Hour = confirm("【正式確認 - 不合格】\n\n該生是否「已默寫超過 1 小時」？\n\n按「確定」= 是（將自動降一級）\n按「取消」= 否（維持原級別，學生可繼續重練）");
+            // FAIL：是否「已超過 1 小時，並已經過了功課提升班的時間」
+            const isOver1Hour = confirm("【正式確認 - 不合格】\n\n該生是否「已超過 1 小時，並已經過了功課提升班的時間」？\n\n按「確定」= 是（將自動降一級 + 強制清除 Batch，今次唔計數）\n按「取消」= 否（維持原級別，學生回位重練）");
             if (isOver1Hour) {
                 targetLevel = getPrevLevel(selectedStudent.level);
-                finalConfirm = `確定為 ${selectedStudent.name} 送出【不合格 (FAIL)】並降至 ${targetLevel}？\n\n請提醒學生下次出來需重新抄寫 8 句並重新排隊。`;
+                forceClearBatch = true; // 強制清除 Batch，下次重新開始
+                finalConfirm = `確定為 ${selectedStudent.name} 送出【不合格 (FAIL)】並降至 ${targetLevel}？\n\n⚠️ 今次唔計數，已強制清除 Batch。\n請提醒學生：下次要再努力，需重新抄寫 8 句並重新排隊。`;
             } else {
                 targetLevel = selectedStudent.level;
+                forceClearBatch = false;
                 finalConfirm = `確定為 ${selectedStudent.name} 送出【不合格 (FAIL)】並維持 ${targetLevel}？\n\n學生將返回座位重練，下次出來需重新抄寫 8 句並重新排隊。`;
             }
         }
@@ -428,6 +446,7 @@
                 sid: selectedStudent.sid,
                 resultStatus: status,
                 targetLevel: targetLevel,
+                forceClearBatch: forceClearBatch,
                 isLevelChange: (targetLevel !== selectedStudent.level)
             })
         })
@@ -436,6 +455,10 @@
             if(btnPass) btnPass.disabled = false;
             if(btnFail) btnFail.disabled = false;
             if (data.status === "success") {
+                // 超過 1 小時 FAIL 時額外提醒老師
+                if (status === "Fail" && forceClearBatch) {
+                    alert("【提醒老師】\n\n已為學生降級並強制清除 Batch。\n今次唔計數。\n請口頭告知學生：下次要再努力啦！");
+                }
                 selectedStudent = null;
                 answersRevealed = false;
                 
@@ -455,6 +478,57 @@
             if(btnPass) btnPass.disabled = false;
             if(btnFail) btnFail.disabled = false;
             alert("網路錯誤，無法提交成績。");
+        });
+    }
+
+    // 匯出當日紀錄 CSV
+    function exportDailyRecords() {
+        const dateInput = document.getElementById("exportDate");
+        let targetDate = dateInput.value;
+        if (!targetDate) {
+            // 預設今天
+            const today = new Date();
+            targetDate = today.getFullYear() + "-" + String(today.getMonth()+1).padStart(2,"0") + "-" + String(today.getDate()).padStart(2,"0");
+            dateInput.value = targetDate;
+        }
+
+        const btns = document.querySelectorAll('button[onclick="exportDailyRecords()"]');
+        const btn = btns.length ? btns[0] : null;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = "下載中...";
+        }
+
+        fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "exportDaily", date: targetDate })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = "下載 CSV";
+            }
+            if (data.status === "success") {
+                const blob = new Blob(["\uFEFF" + data.csv], { type: "text/csv;charset=utf-8;" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "NVN_Records_" + targetDate + ".csv";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } else {
+                alert("匯出失敗：" + (data.message || "未知錯誤"));
+            }
+        })
+        .catch(err => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = "下載 CSV";
+            }
+            alert("網路錯誤，無法匯出紀錄。");
         });
     }
 </script>
