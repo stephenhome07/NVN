@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V1.08 NVN 句子溫習系統 (學生端)</title>
+    <title>V1.09 NVN 句子溫習系統 (學生端)</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; background-color: #f4f6f7; color: #333; }
         .container { max-width: 650px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin: 0 auto; position: relative; }
@@ -161,6 +161,22 @@
         <p style="font-size: 20px; color: #2d3748; font-weight: bold;">老師已批准你放學 / 進行下一階段活動！</p>
         <p style="color: #4a5568; font-size: 15px;">請收拾好你的原子筆與筆記本電腦。</p>
         <button onclick="backToLogin()" style="background-color: #319795; max-width: 200px; margin-top: 20px;">返回登入首頁</button>
+    </div>
+
+    <!-- 超時結束畫面（超過 1 小時 FAIL） -->
+    <div id="overtimeSection" class="hidden" style="background-color: #fffaf0; border: 2px solid #dd6b20; text-align: center; padding: 36px 28px; border-radius: 12px; margin-top: 20px;">
+        <h2 style="border:none; color: #9c4221; margin-bottom:12px;">⏰ 時間已過</h2>
+        <div style="font-size: 60px; margin: 12px 0;">📦</div>
+        <p style="font-size: 18px; color: #2d3748; font-weight: bold; line-height: 1.6; margin: 12px 0;">
+            功課提升班時間已結束。<br>
+            <span style="color:#c05621;">今次出席不計算。</span>
+        </p>
+        <p style="font-size: 16px; color: #4a5568; line-height: 1.6; margin: 16px 0 8px 0;">
+            請收拾書包離開。<br>
+            如想繼續嘗試，請找相關老師安排。
+        </p>
+        <p style="font-size: 15px; color: #744210; margin-top: 18px;">下次要再努力！💪</p>
+        <button onclick="backToLogin()" style="background-color: #dd6b20; color: white; max-width: 220px; margin-top: 22px; padding: 14px 20px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer;">返回登入畫面</button>
     </div>
     
 <script>
@@ -385,17 +401,28 @@
             if (data.status === "success") {
                 if (data.queueStatus.includes("Pass")) {
                     document.getElementById("queueSection").classList.add("hidden");
+                    document.getElementById("mainSection").classList.add("hidden");
                     document.getElementById("passSection").classList.remove("hidden");
                 } 
+                else if (data.queueStatus.includes("FailOvertime")) {
+                    // 超時 FAIL：顯示結束畫面，不要再派新句子
+                    document.getElementById("queueSection").classList.add("hidden");
+                    document.getElementById("mainSection").classList.add("hidden");
+                    document.getElementById("passSection").classList.add("hidden");
+                    document.getElementById("overtimeSection").classList.remove("hidden");
+                }
                 else if (data.queueStatus.includes("Fail")) {
-                    alert("【結果通知】\n\n本次未能合格。\n請返回座位重新溫習，並於準備好後再次排隊。\n\n（若老師已告知「今次唔計數」，下次請再努力！）");
+                    // 一般 FAIL：回位重練（重新載入句子）
+                    alert("【結果通知】\n\n本次未能合格。\n請返回座位重新溫習，並於準備好後再次排隊。");
                     
                     document.getElementById("queueSection").classList.add("hidden");
                     document.getElementById("mainSection").classList.remove("hidden");
                     
                     const btn = document.getElementById("btnJoinQueue");
-                    btn.disabled = false;
-                    btn.innerText = "我已記熟，準備好默書了 🚀";
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerText = "我已記熟，準備好默書了 🚀";
+                    }
                     
                     // 重新載入句子（可能因 Level 變更而改變）
                     loginStudent(); 
@@ -427,6 +454,9 @@
 
     function backToLogin() {
         document.getElementById("passSection").classList.add("hidden");
+        document.getElementById("overtimeSection").classList.add("hidden");
+        document.getElementById("queueSection").classList.add("hidden");
+        document.getElementById("mainSection").classList.add("hidden");
         document.getElementById("loginSection").classList.remove("hidden");
         document.getElementById("studentSid").value = "";
         document.getElementById("loginStatus").innerHTML = ""; 
