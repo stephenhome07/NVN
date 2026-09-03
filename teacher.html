@@ -3,315 +3,365 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V1.07 NVN 句子溫習系統 (學生端)</title>
+    <title>NVN 總司令講台控制面板 (教師端) V1.07</title>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; background-color: #f4f6f7; color: #333; }
-        .container { max-width: 650px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin: 0 auto; position: relative; }
-        h2 { color: #2c3e50; margin-top: 0; text-align: center; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
-        .card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #fff; }
-        label { font-weight: bold; display: block; margin: 10px 0 5px; color: #4a5568; }
-        input, select, button { width: 100%; padding: 14px; box-sizing: border-box; border-radius: 8px; border: 1px solid #cbd5e0; font-size: 16px; }
-        button { background-color: #3498db; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        button:hover { background-color: #2980b9; }
-        button:disabled { background-color: #a0aec0; cursor: not-allowed; }
-        .student-bar { background: #edf2f7; padding: 12px; border-radius: 8px; font-weight: bold; margin-bottom: 20px; display: flex; justify-content: space-between; font-size: 15px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background-color: #1a202c; color: #edf2f7; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 { color: #63b3ed; text-align: center; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #a0aec0; margin-bottom: 25px; font-size: 14px; }
         
-        .vocab-item { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; margin-bottom: 15px; border-radius: 8px; position: relative; }
-        .nvn-row { display: flex; gap: 8px; margin-bottom: 12px; }
-        .nvn-box { flex: 1; padding: 8px; border-radius: 6px; text-align: center; color: white; }
-        .box-n1 { background-color: #3498db; }
-        .box-v  { background-color: #e67e22; }
-        .box-n2 { background-color: #2ecc71; }
-        .box-label { font-size: 11px; opacity: 0.9; margin-bottom: 4px; font-weight: normal; }
-        .box-word { font-size: 17px; font-weight: bold; letter-spacing: 0.5px; }
-        
-        .vocab-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #cbd5e0; padding-top: 10px; }
-        .vocab-chinese { font-size: 15px; color: #4a5568; font-weight: bold; }
-        .btn-audio { background-color: #9b59b6; width: auto; padding: 8px 15px; font-size: 14px; border-radius: 6px; margin: 0; }
-        .btn-audio:hover { background-color: #8e44ad; }
-        
-        .btn-ready { background-color: #e67e22; font-size: 18px; padding: 18px; margin-top: 25px; box-shadow: 0 4px 10px rgba(230,126,34,0.3); }
-        .btn-ready:hover { background-color: #d35400; }
-        .msg { font-size: 16px; font-weight: bold; margin-top: 15px; text-align: center; }
-        .error { color: #e53e3e; }
-        .queue-box { background: #fff3cd; border: 2px dashed #ffc107; padding: 30px; text-align: center; border-radius: 12px; margin-top: 20px; }
-        .hidden { display: none; }
+        .config-bar { background: #232d3f; padding: 12px 20px; border-radius: 8px; margin-bottom: 15px; display: flex; flex-wrap: wrap; justify-content: space-between; font-size: 14px; border: 1px dashed #4a5568; color: #cbd5e0; }
+        .config-item { display: flex; align-items: center; gap: 5px; }
 
-        .btn-manual-refresh {
-            background-color: #2b6cb0;
-            color: white;
-            font-size: 20px;
-            padding: 18px 24px;
-            margin: 20px 0 10px 0;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(43,108,176,0.35);
-            width: 100%;
-        }
-        .btn-manual-refresh:hover { background-color: #2c5282; }
-        .reminder-banner {
-            background: #fffbeb;
-            border: 2px solid #f6ad55;
-            border-radius: 8px;
-            padding: 14px;
-            margin-bottom: 18px;
-            font-size: 15px;
-            color: #744210;
-            line-height: 1.5;
-            font-weight: 600;
-        }
+        .focus-card { background: #2d3748; border: 3px solid #4299e1; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .focus-title { font-size: 22px; font-weight: bold; color: #fbd38d; border-bottom: 1px solid #4a5568; padding-bottom: 10px; margin-bottom: 15px; }
+        .test-question { background: #1a202c; padding: 15px; border-radius: 8px; margin-bottom: 12px; border-left: 6px solid #48bb78; }
+        .rev-sentence { background: #1a202c; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; border-left: 5px solid #ed8936; font-size: 16px; }
+        .eng-ans { font-size: 20px; font-weight: bold; color: #fff; letter-spacing: 0.5px; }
+        .chi-hint { font-size: 16px; color: #cbd5e0; margin-top: 5px; font-style: italic; }
+        
+        .control-row { display: flex; gap: 15px; align-items: center; margin-top: 20px; background: #232d3f; padding: 15px; border-radius: 8px; flex-wrap: wrap; }
+        .level-select { padding: 12px; font-size: 16px; border-radius: 6px; background: #4a5568; color: white; border: none; font-weight: bold; }
+        .btn { padding: 14px 28px; font-size: 18px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; transition: 0.2s; }
+        .btn-pass { background-color: #48bb78; color: white; flex: 2; }
+        .btn-pass:hover { background-color: #38a169; }
+        .btn-fail { background-color: #e53e3e; color: white; flex: 1; }
+        .btn-fail:hover { background-color: #c53030; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        
+        .queue-table { width: 100%; border-collapse: collapse; background: #2d3748; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .queue-table th { background-color: #4a5568; color: #ebf8ff; padding: 15px; text-align: left; font-size: 16px; }
+        .queue-table td { padding: 15px; border-bottom: 1px solid #4a5568; font-size: 16px; }
+        .queue-table tr:hover { background-color: #3a4659; cursor: pointer; }
+        
+        .badge-live { background-color: #f56565; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; animation: blink 1.5s infinite; }
+        .badge-lv { background-color: #ed8936; color: white; padding: 3px 8px; border-radius: 4px; font-size: 13px; font-weight: bold; }
+        
+        @keyframes blink { 0% {opacity: 1;} 50% {opacity: 0.4;} 100% {opacity: 1;} }
+        .empty-msg { text-align: center; color: #a0aec0; padding: 40px; font-size: 18px; }
+        .refresh-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
 
-        /* Loading Overlay */
-        #loadingOverlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.65);
-            z-index: 9999;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
+        .btn-big-refresh {
+            background: #2b6cb0;
             color: white;
-            font-size: 20px;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 17px;
             font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(43,108,176,0.4);
         }
-        #loadingOverlay.active { display: flex; }
-        .spinner {
-            width: 50px; height: 50px;
-            border: 5px solid #ffffff55;
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-bottom: 20px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .btn-big-refresh:hover { background: #2c5282; }
+        .btn-big-refresh:disabled { background: #4a5568; cursor: not-allowed; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-<div id="loadingOverlay">
-    <div class="spinner"></div>
-    <div id="loadingText">載入中，請稍候...</div>
-</div>
-
 <div class="container">
-    <h2>🎯 NVN 句子溫習系統</h2>
+    <h1>👨‍🏫 NVN 總司令講台控制面板</h1>
+    <div class="subtitle">HO YU COLLEGE • 英語純紙筆默寫即時批改系統 (V1.07)</div>
 
-    <div id="loginSection" class="card">
-        <label for="studentSid">請輸入你的學校電郵登入：</label>
-        <input type="text" id="studentSid" placeholder="例如: s19010040@hoyu.edu.hk">
-        
-        <label for="studentRoom" style="color: #2c3e50; font-size: 15px; margin-top: 15px;">📍 請選擇你正前往哪一個課室搵老師默寫：</label>
-        <select id="studentRoom" style="font-weight: bold; color: #2d3748; background: white;">
-            <option value="">正在連線獲取課室名單...</option>
+    <div class="config-bar">
+        <div class="config-item">📊 當前雲端參數設定：</div>
+        <div class="config-item">📖 學生溫習題數：<span id="cfgRevCount" style="color:#fbd38d; font-weight:bold;">載入中...</span> 題</div>
+        <div class="config-item">🎯 抽問抽考題數：<span id="cfgTestCount" style="color:#fbd38d; font-weight:bold;">載入中...</span> 題</div>
+    </div>
+
+    <div id="roomSelectBar" style="background: #2d3748; padding: 15px; border-radius: 8px; margin-bottom: 25px; display: flex; align-items: center; gap: 12px; border: 1px solid #4a5568; flex-wrap: wrap;">
+        <label style="font-weight: bold; color: #63b3ed; font-size: 16px;">🏫 選擇當前講台所在的課室：</label>
+        <select id="teacherRoom" onchange="fetchQueue()" style="padding: 10px 15px; font-size: 16px; border-radius: 6px; background: #1a202c; color: white; border: 1px solid #4a5568; font-weight: bold; cursor: pointer;">
+            <option value="ALL">顯示所有課室 (全部名單)</option>
         </select>
-
-        <button id="btnLogin" onclick="loginStudent()" style="margin-top: 20px;">開始溫習</button>
-        <div id="loginStatus" class="msg error"></div>
     </div>
 
-    <div id="mainSection" class="hidden">
-        <div class="student-bar">
-            <span id="displayStudent">學生：---</span>
-            <span id="displayClass">班別：---</span>
+    <!-- 測試聚焦區 -->
+    <div id="focusArea" class="focus-card" style="display: none;">
+        <div class="focus-title">
+            🔊 正在測試：<span id="fStudent" style="color:#63b3ed;">---</span> 
+            <span style="font-size:14px; color:#a0aec0; margin-left:15px;" id="fSid"></span>
+        </div>
+        
+        <!-- 階段 1：核對 8 句抄寫紙 -->
+        <div id="revisionCheckSection">
+            <p style="color:#fbd38d; font-weight:bold; font-size:16px;">📋 請先核對學生交出的 8 句抄寫紙（入場票）</p>
+            <div id="revisionSentencesContainer"></div>
+            <button class="btn" style="background:#ed8936; color:white; margin-top:15px; width:100%;" onclick="startDictation()">✅ 已核對抄寫紙，開始抽題默書</button>
         </div>
 
-        <div class="reminder-banner">
-            ⚠️ <strong>重要提醒：</strong>請先在白紙上<strong>完整抄寫以下全部句子一次</strong>。<br>
-            抄寫完成後，才可按下「我已記熟，準備好默書了」前往排隊。未抄寫者將不獲准開始默書。
+        <!-- 階段 2：4 題測試 -->
+        <div id="testSection" class="hidden">
+            <p style="color:#a0aec0; margin:0 0 10px 0; font-size:14px;">💡 講台提示：你可以口頭讀出中文提示，或者將螢幕面向學生給予視覺提示。核對學生手寫答案是否與白色英文一致。</p>
+            <button class="btn" id="btnToggleAnswers" style="background-color: #e67e22; color: white; margin-bottom: 15px; padding: 10px 20px; font-size: 16px; width: auto;" onclick="toggleAnswers()">👁️ 顯示英文答案核對</button>
+            <div id="testQuestionsContainer"></div>
+
+            <div class="control-row">
+                <label style="font-weight:bold; color:#cbd5e0;">🤫 秘密評級調整：</label>
+                <select id="actionLevel" class="level-select">
+                    <option value="LV1">LV1: 香港小一至小三</option>
+                    <option value="LV2">LV2: 香港小四至小六</option>
+                    <option value="LV3">LV3: 香港中一至中二</option>
+                    <option value="LV4">LV4: 香港中三至中四</option>
+                    <option value="LV5">LV5: 香港中五至中六</option>
+                    <option value="LV6">LV6: 大學用 / 高階</option>
+                </select>
+                
+                <button class="btn btn-pass" id="btnPass" onclick="submitAssessment('Pass')">🎉 合格 (PASS) / 准予放學</button>
+                <button class="btn btn-fail" id="btnFail" onclick="submitAssessment('Fail')">❌ 不合格 (FAIL) / 回位重練</button>
+            </div>
         </div>
-
-        <div class="card" style="background-color: #f0fff4; border-color: #c6f6d5; text-align: center;">
-            <p style="margin:0; font-weight:bold; color:#22543d;">
-                📝 溫習指引：今天系統為你挑選了 <span id="displayRevCount" style="color:#e67e22; font-size:20px;">8</span> 句重點。<br>
-                請看清楚 <span style="color:#3498db;">主語</span>、<span style="color:#e67e22;">動詞</span>、<span style="color:#2ecc71;">賓語</span> 的結構，在白紙上手寫練習！
-            </p>
-        </div>
-
-        <div id="vocabList"></div>
-
-        <button class="btn-ready" id="btnJoinQueue" onclick="requestQueue()">我已記熟，準備好默書了 🚀</button>
     </div>
 
-    <div id="queueSection" class="queue-box hidden">
-        <h2 style="border:none; color:#d35400; margin-bottom:15px;">🔴 已進入排隊名單</h2>
-        <p style="font-size: 18px; font-weight: bold; color: #2c3e50;" id="queueUserBar"></p>
-        
-        <div style="background:#fff5f5; border:2px solid #fc8181; border-radius:8px; padding:16px; margin:15px 0; text-align:left; line-height:1.6;">
-            <strong style="color:#c53030; font-size:16px;">📌 請立即執行以下步驟：</strong><br>
-            1. 放下 iPad，只帶你的「白紙」與「筆」。<br>
-            2. <strong>必須將已抄寫的 8 句英文紙交給老師檢查並收下</strong>（此為入場票）。<br>
-            3. 等待老師叫名後，才可走到講台開始默書。<br>
-            4. 默書時使用新的白紙。
+    <!-- 排隊區（測試中會隱藏） -->
+    <div id="queueArea">
+        <div class="refresh-bar">
+            <h3 style="margin:0;">🔴 講台前排隊名單 (<span id="queueCount">0</span> 人正在等候)</h3>
+            <button class="btn-big-refresh" id="btnRefresh" onclick="manualRefresh()">🔄 立即更新名單</button>
         </div>
-
-        <p style="font-size: 16px; color: #7f8c8d; line-height: 1.6;">
-            系統已從你剛才溫習的 <span id="queueRevCount">8</span> 句中，隨機抽出了 <strong id="queueTestCount" style="color: #e74c3c; font-size: 20px;">4 句</strong> 作為測試。
-        </p>
+        <p style="color:#a0aec0; font-size:13px; margin:-5px 0 15px 0;">系統約每 60 秒自動更新一次。建議在叫名前手動按「立即更新名單」。</p>
         
-        <div style="font-size: 50px; margin: 15px 0;">⏳</div>
-        
-        <button class="btn-manual-refresh" id="btnManualRefresh" onclick="manualCheckStatus()">🔄 立即更新狀態</button>
-        <p style="color: #7f8c8d; font-size: 13px; margin-top:8px;">請勿關閉網頁。測驗完畢後請按上方按鈕更新狀態。</p>
+        <table class="queue-table">
+            <thead>
+                <tr>
+                    <th width="10%">狀態</th>
+                    <th width="15%">班別 (學號)</th>
+                    <th width="20%">學生姓名</th>
+                    <th width="20%">目前秘密級別</th>
+                    <th width="35%">操作</th>
+                </tr>
+            </thead>
+            <tbody id="queueTableBody">
+                <tr><td colspan="5" class="empty-msg">正在連線至雲端獲取名單...</td></tr>
+            </tbody>
+        </table>
     </div>
 </div>
 
-    <div id="passSection" class="hidden" style="background-color: #e6fffa; border: 2px solid #319795; text-align: center; padding: 40px; border-radius: 12px; margin-top: 20px;">
-        <h2 style="border:none; color: #234e52; margin-bottom:15px;">🎉 恭喜你！挑戰成功！</h2>
-        <div style="font-size: 70px; margin: 20px 0;">🔓</div>
-        <p style="font-size: 20px; color: #2d3748; font-weight: bold;">老師已批准你放學 / 進行下一階段活動！</p>
-        <p style="color: #4a5568; font-size: 15px;">請收拾好你的原子筆與筆記本電腦。</p>
-        <button onclick="backToLogin()" style="background-color: #319795; max-width: 200px; margin-top: 20px;">返回登入首頁</button>
-    </div>
-    
 <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbziG9ZuR_hPZMRsZ98sGIvRVQFDABO3L7uimBbI-6bLeR2hqmBLtUNoa6TqMHftNb6-jA/exec"; 
 
-    let currentStudent = null;
-    let mySentences = [];
-    let globalSettings = { rooms: [], revisionCount: 8, testCount: 4 };
-
-    function showLoading(text) {
-        document.getElementById("loadingText").innerText = text || "載入中，請稍候...";
-        document.getElementById("loadingOverlay").classList.add("active");
-    }
-    function hideLoading() {
-        document.getElementById("loadingOverlay").classList.remove("active");
-    }
+    let currentQueue = [];
+    let selectedStudent = null;
+    let systemSettings = { rooms: [], revisionCount: 8, testCount: 4 };
+    let answersRevealed = false;
+    let pollTimer = null;
+    const POLL_INTERVAL = 60000; // 60 秒
 
     window.onload = function() {
-        initSystem();
+        loadInitSettings();
     };
 
-    function initSystem() {
-        const roomSelect = document.getElementById("studentRoom");
-        
+    function startPoll() {
+        clearInterval(pollTimer);
+        pollTimer = setInterval(fetchQueue, POLL_INTERVAL);
+    }
+
+    function stopPoll() {
+        clearInterval(pollTimer);
+        pollTimer = null;
+    }
+
+    function loadInitSettings() {
         fetch(GAS_URL, {
             method: "POST",
             body: JSON.stringify({ action: "getInitData" })
         })
         .then(r => r.json())
         .then(data => {
-            if (data.status === "success") {
-                globalSettings = data.settings;
+            if(data.status === "success") {
+                systemSettings = data.settings;
                 
-                roomSelect.innerHTML = "";
-                if (globalSettings.rooms && globalSettings.rooms.length > 0) {
-                    globalSettings.rooms.forEach(room => {
+                document.getElementById("cfgRevCount").innerText = systemSettings.revisionCount;
+                document.getElementById("cfgTestCount").innerText = systemSettings.testCount;
+                
+                const roomSelect = document.getElementById("teacherRoom");
+                roomSelect.innerHTML = '<option value="ALL">顯示所有課室 (全部名單)</option>';
+                
+                systemSettings.rooms.forEach(room => {
+                    if(room) {
                         const opt = document.createElement("option");
                         opt.value = room;
                         opt.innerText = room + " 課室";
                         roomSelect.appendChild(opt);
-                    });
-                } else {
-                    roomSelect.innerHTML = '<option value="">(Excel未設定課室)</option>';
-                }
+                    }
+                });
 
-                document.getElementById("displayRevCount").innerText = globalSettings.revisionCount;
-                document.getElementById("queueRevCount").innerText = globalSettings.revisionCount;
-                document.getElementById("queueTestCount").innerText = globalSettings.testCount + " 句";
+                fetchQueue();
+                startPoll(); 
             } else {
-                roomSelect.innerHTML = '<option value="">載入失敗：' + data.message + '</option>';
+                alert("獲取雲端參數失敗: " + data.message);
             }
         })
-        .catch(err => {
-            roomSelect.innerHTML = '<option value="">連線失敗，請檢查網路或 GAS 網址</option>';
-        });
+        .catch(err => console.error("系統初始設定載入失敗:", err));
     }
 
-    function loginStudent() {
-        const sid = document.getElementById("studentSid").value.trim();
-        const room = document.getElementById("studentRoom").value;
-        const statusDiv = document.getElementById("loginStatus");
-        
-        if(!sid) { alert("請輸入學校電郵！"); return; }
-        if(!room) { alert("請選擇你目前前往的課室！"); return; }
-
-        const confirmMsg = "【重要提醒】\n\n" +
-            "開始溫習後，系統將顯示 " + globalSettings.revisionCount + " 句英文句子。\n\n" +
-            "請務必先在白紙上完整抄寫全部句子一次，\n" +
-            "然後才可前往排隊默書。\n\n" +
-            "未完成抄寫者將不獲准開始默書。\n\n" +
-            "確認已準備好開始溫習？";
-        if (!confirm(confirmMsg)) return;
-        
-        showLoading("正在載入你的專屬溫習題...");
-        document.getElementById("btnLogin").disabled = true;
+    function fetchQueue() {
+        const roomSelect = document.getElementById("teacherRoom");
+        const selectedRoom = roomSelect ? roomSelect.value : "ALL";
+        const btnRefresh = document.getElementById("btnRefresh");
+        if(btnRefresh) {
+            btnRefresh.disabled = true;
+            btnRefresh.innerText = "🔄 更新中...";
+        }
 
         fetch(GAS_URL, {
             method: "POST",
-            body: JSON.stringify({ action: "studentLogin", sid: sid, revisionCount: globalSettings.revisionCount })
+            body: JSON.stringify({ action: "getQueue", room: selectedRoom })
         })
         .then(r => r.json())
         .then(data => {
-            hideLoading();
-            document.getElementById("btnLogin").disabled = false;
-            if (data.status === "success") {
-                if (data.alreadyInQueue) {
-                    currentStudent = { sid: sid, name: data.student.name, className: data.student.className, classNumber: data.student.classNumber, room: data.room };
-                    document.getElementById("loginSection").classList.add("hidden");
-                    document.getElementById("queueSection").classList.remove("hidden");
-                    document.getElementById("queueUserBar").innerText = `${currentStudent.className}班 ${currentStudent.name} (前往：${currentStudent.room}課室)`;
-                    return;
-                }
-
-                currentStudent = { sid: sid, name: data.student.name, className: data.student.className, classNumber: data.student.classNumber, room: room };
-                mySentences = data.sentences;
-
-                document.getElementById("loginSection").classList.add("hidden");
-                document.getElementById("mainSection").classList.remove("hidden");
-
-                document.getElementById("displayStudent").innerText = `學生：${currentStudent.name}`;
-                document.getElementById("displayClass").innerText = `班別：${currentStudent.className} (${currentStudent.classNumber}號)`;
-
-                document.getElementById("btnJoinQueue").classList.remove("hidden");
-                renderVocabList();
-            } else {
-                statusDiv.innerHTML = data.message;
+            if(btnRefresh) {
+                btnRefresh.disabled = false;
+                btnRefresh.innerText = "🔄 立即更新名單";
+            }
+            if(data.status === "success") {
+                currentQueue = data.queue;
+                renderQueueTable();
             }
         })
         .catch(err => {
-            hideLoading();
-            document.getElementById("btnLogin").disabled = false;
-            statusDiv.innerHTML = "連線失敗，請檢查網路或 GAS 網址。";
+            if(btnRefresh) {
+                btnRefresh.disabled = false;
+                btnRefresh.innerText = "🔄 立即更新名單";
+            }
+            console.error("撈取排隊名單失敗:", err);
         });
     }
 
-    function renderVocabList() {
-        const container = document.getElementById("vocabList");
-        container.innerHTML = "";
+    function manualRefresh() {
+        fetchQueue();
+        startPoll(); // 重置 60 秒計時
+    }
 
-        if (mySentences.length === 0) {
-            container.innerHTML = "<p style='text-align:center;'>目前沒有題目。</p>";
-            document.getElementById("btnJoinQueue").classList.add("hidden");
+    function renderQueueTable() {
+        const tbody = document.getElementById("queueTableBody");
+        document.getElementById("queueCount").innerText = currentQueue.length;
+        
+        if(currentQueue.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">☕ 目前該課室沒有學生在排隊。</td></tr>';
             return;
         }
 
-        mySentences.forEach((s) => {
-            const div = document.createElement("div");
-            div.className = "vocab-item";
+        tbody.innerHTML = "";
+        currentQueue.forEach(student => {
+            const tr = document.createElement("tr");
+            tr.onclick = () => selectStudentForTest(student);
             
-            div.innerHTML = `
-                <div class="nvn-row">
-                    <div class="nvn-box box-n1">
-                        <div class="box-label">主語 Noun</div>
-                        <div class="box-word">${s.n1}</div>
-                    </div>
-                    <div class="nvn-box box-v">
-                        <div class="box-label">動詞 Verb</div>
-                        <div class="box-word">${s.v}</div>
-                    </div>
-                    <div class="nvn-box box-n2">
-                        <div class="box-label">賓語 Noun</div>
-                        <div class="box-word">${s.n2}</div>
-                    </div>
-                </div>
-                <div class="vocab-footer">
-                    <div class="vocab-chinese">📌 提示：${s.chinese}</div>
-                    <button class="btn-audio" onclick="speakText('${s.full.replace(/'/g, "\\'")}')">🔊 聽整句讀音</button>
-                </div>
+            tr.innerHTML = `
+                <td><span class="badge-live">等待中</span></td>
+                <td><strong>${student.className}班</strong> (${student.classNumber}號)<br><span style="color:#fc8181; font-size:12px;">📍 前往: ${student.room}</span></td>
+                <td><span style="font-size:18px; font-weight:bold; color:#63b3ed;">${student.name}</span></td>
+                <td><span class="badge-lv">${student.level}</span></td>
+                <td><button style="background:#3182ce; color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:bold;">🎯 開始測試</button></td>
             `;
-            container.appendChild(div);
+            tbody.appendChild(tr);
         });
+    }
+
+    function selectStudentForTest(student) {
+        const confirmMsg = "【正式操作提醒】\n\n" +
+            "開始測試前請確認：\n\n" +
+            "1. 已收下該學生抄寫的 8 句英文紙（作為入場票）；\n" +
+            "2. 可以正式叫該學生走到講台開始默書。\n\n" +
+            "確認後將顯示該生的 8 句溫習內容供核對。";
+        if (!confirm(confirmMsg)) return;
+
+        selectedStudent = student;
+        answersRevealed = false;
+        
+        // 停止輪詢 + 隱藏排隊區
+        stopPoll();
+        document.getElementById("queueArea").classList.add("hidden");
+        document.getElementById("roomSelectBar").classList.add("hidden");
+        
+        document.getElementById("focusArea").style.display = "block";
+        document.getElementById("fStudent").innerText = `${student.className}班 ${student.name} (於 ${student.room} 課室)`;
+        document.getElementById("fSid").innerText = `(電郵: ${student.sid})`;
+        
+        document.getElementById("actionLevel").value = student.level;
+        
+        // 顯示 8 句核對區，隱藏測試區
+        document.getElementById("revisionCheckSection").classList.remove("hidden");
+        document.getElementById("testSection").classList.add("hidden");
+        
+        // 渲染 8 句溫習句子
+        const revContainer = document.getElementById("revisionSentencesContainer");
+        revContainer.innerHTML = "";
+        const revs = student.revisionSentences || [];
+        if (revs.length === 0) {
+            revContainer.innerHTML = "<p style='color:#a0aec0;'>（此學生暫無完整溫習句子紀錄，請直接目視核對紙本）</p>";
+        } else {
+            revs.forEach((raw, idx) => {
+                const parts = raw.split(" ||| ");
+                const eng = parts[0] || "";
+                const chi = parts[1] || "";
+                const div = document.createElement("div");
+                div.className = "rev-sentence";
+                div.innerHTML = `<strong>${idx+1}.</strong> ${eng} <span style="color:#a0aec0; font-size:14px;">（${chi}）</span>`;
+                revContainer.appendChild(div);
+            });
+        }
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function startDictation() {
+        // 切換到 4 題測試畫面
+        document.getElementById("revisionCheckSection").classList.add("hidden");
+        document.getElementById("testSection").classList.remove("hidden");
+        
+        // 重置答案按鈕
+        const btnToggle = document.getElementById("btnToggleAnswers");
+        btnToggle.style.display = "inline-block";
+        btnToggle.innerText = "👁️ 顯示英文答案核對";
+        btnToggle.disabled = false;
+        btnToggle.style.backgroundColor = "#e67e22";
+        btnToggle.style.cursor = "pointer";
+        answersRevealed = false;
+
+        const container = document.getElementById("testQuestionsContainer");
+        container.innerHTML = "";
+
+        const questionFields = selectedStudent.testQuestions || [];
+        let count = 1;
+
+        questionFields.forEach(rawField => {
+            if (!rawField) return;
+            const parts = rawField.split(" ||| ");
+            const english = parts[0];
+            const chinese = parts[1] || "暫無中文提示";
+
+            const qDiv = document.createElement("div");
+            qDiv.className = "test-question";
+            
+            qDiv.innerHTML = `
+                <div class="chi-hint" style="font-size: 18px; color: #cbd5e0; font-weight: bold; margin-bottom: 8px;">
+                    📢 第 ${count} 題提示：${chinese}
+                    <button onclick="speakText('${english.replace(/'/g, "\\'")}')" style="background:#9b59b6; color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer; margin-left:12px; font-size:14px; font-weight:bold;">🔊 播放讀音</button>
+                </div>
+                <div class="eng-ans" style="display: none; font-size: 20px; font-weight: bold; color: #63b3ed; letter-spacing: 0.5px; background:#1a202c; padding:10px; border-radius:6px; border: 1px dashed #4a5568;">💡 正確答案：${english}</div>
+            `;
+            container.appendChild(qDiv);
+            count++;
+        });
+    }
+
+    function toggleAnswers() {
+        if (answersRevealed) return;
+
+        const ansDivs = document.querySelectorAll(".eng-ans");
+        const btn = document.getElementById("btnToggleAnswers");
+        
+        ansDivs.forEach(div => {
+            div.style.display = "block";
+        });
+        
+        answersRevealed = true;
+        btn.innerText = "✅ 答案已顯示（不可再隱藏）";
+        btn.disabled = true;
+        btn.style.backgroundColor = "#718096";
+        btn.style.cursor = "not-allowed";
     }
 
     function speakText(text) {
@@ -322,125 +372,90 @@
         window.speechSynthesis.speak(utterance);
     }
 
-    function requestQueue() {
-        if (!currentStudent) return;
+    function getNextLevel(current) {
+        const levels = ["LV1","LV2","LV3","LV4","LV5","LV6"];
+        const idx = levels.indexOf(current);
+        if (idx < 0 || idx >= levels.length - 1) return current;
+        return levels[idx + 1];
+    }
+    function getPrevLevel(current) {
+        const levels = ["LV1","LV2","LV3","LV4","LV5","LV6"];
+        const idx = levels.indexOf(current);
+        if (idx <= 0) return current;
+        return levels[idx - 1];
+    }
 
-        const confirmMsg = "【正式確認】\n\n" +
-            "一旦按下「確定」，系統將：\n" +
-            "1. 從你剛才溫習的句子中隨機抽出測試題；\n" +
-            "2. 立即遮蓋英文句子，之後不能再查看；\n" +
-            "3. 將你加入排隊名單。\n\n" +
-            "你必須：\n" +
-            "• 帶上已抄寫的 8 句英文紙交給老師；\n" +
-            "• 等待老師叫名後才可開始默書。\n\n" +
-            "確認已完成抄寫並準備好排隊？";
-        if (!confirm(confirmMsg)) return;
+    function submitAssessment(status) {
+        if (!selectedStudent) return;
+        
+        let targetLevel = document.getElementById("actionLevel").value;
+        let finalConfirm = "";
 
-        const btn = document.getElementById("btnJoinQueue");
-        btn.disabled = true;
-        btn.innerText = "正在抽題與排隊...";
-        showLoading("正在抽題並加入排隊名單...");
+        if (status === "Pass") {
+            const isFirstFast = confirm("【正式確認 - 合格】\n\n該生是否「第一次出來默寫」並且「在 30 分鐘內完成」？\n\n按「確定」= 是（將自動升一級）\n按「取消」= 否（維持原級別）");
+            if (isFirstFast) {
+                targetLevel = getNextLevel(selectedStudent.level);
+                finalConfirm = `確定為 ${selectedStudent.name} 送出【合格 (PASS)】並升至 ${targetLevel}？`;
+            } else {
+                targetLevel = selectedStudent.level;
+                finalConfirm = `確定為 ${selectedStudent.name} 送出【合格 (PASS)】並維持 ${targetLevel}？`;
+            }
+        } else {
+            const isOver1Hour = confirm("【正式確認 - 不合格】\n\n該生是否「已默寫超過 1 小時」？\n\n按「確定」= 是（將自動降一級）\n按「取消」= 否（維持原級別，學生可繼續重練）");
+            if (isOver1Hour) {
+                targetLevel = getPrevLevel(selectedStudent.level);
+                finalConfirm = `確定為 ${selectedStudent.name} 送出【不合格 (FAIL)】並降至 ${targetLevel}？\n\n請提醒學生下次出來需重新抄寫 8 句並重新排隊。`;
+            } else {
+                targetLevel = selectedStudent.level;
+                finalConfirm = `確定為 ${selectedStudent.name} 送出【不合格 (FAIL)】並維持 ${targetLevel}？\n\n學生將返回座位重練，下次出來需重新抄寫 8 句並重新排隊。`;
+            }
+        }
+
+        if (!confirm(finalConfirm)) return;
+
+        // 更新下拉選單顯示
+        document.getElementById("actionLevel").value = targetLevel;
+
+        const btnPass = document.getElementById("btnPass");
+        const btnFail = document.getElementById("btnFail");
+        if(btnPass) btnPass.disabled = true;
+        if(btnFail) btnFail.disabled = true;
 
         fetch(GAS_URL, {
             method: "POST",
-            body: JSON.stringify({ 
-                action: "joinQueue", 
-                sid: currentStudent.sid, 
-                room: currentStudent.room,
-                testCount: globalSettings.testCount 
+            body: JSON.stringify({
+                action: "submitResult",
+                sid: selectedStudent.sid,
+                resultStatus: status,
+                targetLevel: targetLevel,
+                isLevelChange: (targetLevel !== selectedStudent.level)
             })
         })
         .then(r => r.json())
         .then(data => {
-            hideLoading();
+            if(btnPass) btnPass.disabled = false;
+            if(btnFail) btnFail.disabled = false;
             if (data.status === "success") {
-                document.getElementById("mainSection").classList.add("hidden");
-                document.getElementById("queueSection").classList.remove("hidden");
-                document.getElementById("queueUserBar").innerText = `${currentStudent.className}班 ${currentStudent.name} (前往：${currentStudent.room}課室)`;
+                selectedStudent = null;
+                answersRevealed = false;
+                
+                // 返回排隊畫面
+                document.getElementById("focusArea").style.display = "none";
+                document.getElementById("queueArea").classList.remove("hidden");
+                document.getElementById("roomSelectBar").classList.remove("hidden");
+                
+                // 立即更新 + 重啟 60 秒輪詢
+                fetchQueue();
+                startPoll();
             } else {
-                alert("排隊出錯：" + data.message);
-                btn.disabled = false;
-                btn.innerText = "我已記熟，準備好默書了 🚀";
+                alert("後端出錯：" + data.message);
             }
         })
         .catch(err => {
-            hideLoading();
-            alert("網路錯誤或伺服器回應超時。\n若你已重新整理網頁，請嘗試重新登入查看排隊狀態。");
-            btn.disabled = false;
-            btn.innerText = "我已記熟，準備好默書了 🚀";
+            if(btnPass) btnPass.disabled = false;
+            if(btnFail) btnFail.disabled = false;
+            alert("網路錯誤，無法提交成績。");
         });
-    }
-
-    function checkStatusFromServer() {
-        if (!currentStudent) return;
-        
-        showLoading("正在檢查最新狀態...");
-        fetch(GAS_URL, {
-            method: "POST",
-            body: JSON.stringify({ action: "checkStatus", sid: currentStudent.sid })
-        })
-        .then(r => r.json())
-        .then(data => {
-            hideLoading();
-            if (data.status === "success") {
-                if (data.queueStatus.includes("Pass")) {
-                    document.getElementById("queueSection").classList.add("hidden");
-                    document.getElementById("passSection").classList.remove("hidden");
-                } 
-                else if (data.queueStatus.includes("Fail")) {
-                    alert("【結果通知】\n\n本次未能合格。\n請返回座位重新溫習，並於準備好後再次排隊。");
-                    
-                    document.getElementById("queueSection").classList.add("hidden");
-                    document.getElementById("mainSection").classList.remove("hidden");
-                    
-                    const btn = document.getElementById("btnJoinQueue");
-                    btn.disabled = false;
-                    btn.innerText = "我已記熟，準備好默書了 🚀";
-                    
-                    // 重新載入句子
-                    loginStudent(); 
-                } else {
-                    alert("目前狀態：" + data.queueStatus + "\n請繼續等候老師叫名。");
-                }
-            }
-        })
-        .catch(err => {
-            hideLoading();
-            alert("檢查狀態失敗，請稍後再試。");
-        });
-    }
-
-    function manualCheckStatus() {
-        const btn = document.getElementById("btnManualRefresh");
-        if (btn) {
-            btn.disabled = true;
-            btn.innerText = "正在檢查...";
-        }
-        checkStatusFromServer();
-        setTimeout(() => {
-            if (btn) {
-                btn.disabled = false;
-                btn.innerText = "🔄 立即更新狀態";
-            }
-        }, 2000);
-    }
-
-    function backToLogin() {
-        document.getElementById("passSection").classList.add("hidden");
-        document.getElementById("loginSection").classList.remove("hidden");
-        document.getElementById("studentSid").value = "";
-        document.getElementById("loginStatus").innerHTML = ""; 
-        
-        currentStudent = null;
-        mySentences = [];
-        
-        const btn = document.getElementById("btnJoinQueue");
-        if(btn) {
-            btn.disabled = false;
-            btn.innerText = "我已記熟，準備好默書了 🚀";
-        }
-        
-        initSystem();
     }
 </script>
 </body>
