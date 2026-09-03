@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V1.09  NVN 句子溫習系統 (學生端)</title>
+    <title>V1.09 NVN 句子溫習系統 (學生端)</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; background-color: #f4f6f7; color: #333; }
         .container { max-width: 650px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin: 0 auto; position: relative; }
@@ -115,6 +115,13 @@
             <span id="displayClass">班別：---</span>
         </div>
 
+        <!-- 倒數計時器 -->
+        <div id="studentTimerBar" style="background: linear-gradient(135deg, #2b6cb0, #2c5282); padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; color: white;">
+            <span style="font-weight: bold; font-size: 14px;">⏱️ 剩餘時間</span>
+            <span id="studentTimerDisplay" style="font-size: 26px; font-weight: bold; letter-spacing: 1px; font-variant-numeric: tabular-nums;">--:--</span>
+            <span id="studentTimerRange" style="font-size: 12px; opacity: 0.9;">時段載入中...</span>
+        </div>
+
         <div class="reminder-banner">
             ⚠️ <strong>重要提醒：</strong>請先在白紙上<strong>完整抄寫以下全部句子一次</strong>。<br>
             抄寫完成後，才可按下「我已記熟，準備好默書了」前往排隊。未抄寫者將不獲准開始默書。
@@ -184,7 +191,8 @@
 
     let currentStudent = null;
     let mySentences = [];
-    let globalSettings = { rooms: [], revisionCount: 8, testCount: 4 };
+    let globalSettings = { rooms: [], revisionCount: 8, testCount: 4, sessionStart: "15:40", sessionDurationMin: 60 };
+    let studentCountdownTimer = null;
 
     function showLoading(text) {
         document.getElementById("loadingText").innerText = text || "載入中，請稍候...";
@@ -192,6 +200,66 @@
     }
     function hideLoading() {
         document.getElementById("loadingOverlay").classList.remove("active");
+    }
+
+    function getSessionBounds() {
+        const startStr = globalSettings.sessionStart || "15:40";
+        const duration = parseInt(globalSettings.sessionDurationMin) || 60;
+        const parts = startStr.split(":");
+        const h = parseInt(parts[0]) || 15;
+        const m = parseInt(parts[1]) || 40;
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0);
+        const end = new Date(start.getTime() + duration * 60 * 1000);
+        return { start: start, end: end, startStr: startStr, duration: duration };
+    }
+
+    function formatEndTime(end) {
+        return String(end.getHours()).padStart(2,"0") + ":" + String(end.getMinutes()).padStart(2,"0");
+    }
+
+    function updateStudentCountdown() {
+        const display = document.getElementById("studentTimerDisplay");
+        const rangeLabel = document.getElementById("studentTimerRange");
+        const bar = document.getElementById("studentTimerBar");
+        if (!display) return;
+        const bounds = getSessionBounds();
+        const now = new Date();
+        if (rangeLabel) {
+            rangeLabel.innerText = bounds.startStr + " – " + formatEndTime(bounds.end);
+        }
+        if (now < bounds.start) {
+            const diff = Math.floor((bounds.start - now) / 1000);
+            const mm = Math.floor(diff / 60);
+            const ss = diff % 60;
+            display.innerText = "尚未開始 " + String(mm).padStart(2,"0") + ":" + String(ss).padStart(2,"0");
+            display.style.color = "#fbd38d";
+            if (bar) bar.style.background = "linear-gradient(135deg, #975a16, #744210)";
+            return;
+        }
+        if (now >= bounds.end) {
+            display.innerText = "時間已結束 00:00";
+            display.style.color = "#fc8181";
+            if (bar) bar.style.background = "linear-gradient(135deg, #c53030, #9b2c2c)";
+            return;
+        }
+        const diff = Math.floor((bounds.end - now) / 1000);
+        const mm = Math.floor(diff / 60);
+        const ss = diff % 60;
+        display.innerText = String(mm).padStart(2,"0") + ":" + String(ss).padStart(2,"0");
+        if (diff <= 300) {
+            display.style.color = "#fc8181";
+            if (bar) bar.style.background = "linear-gradient(135deg, #c53030, #9b2c2c)";
+        } else {
+            display.style.color = "#fff";
+            if (bar) bar.style.background = "linear-gradient(135deg, #2b6cb0, #2c5282)";
+        }
+    }
+
+    function startStudentCountdown() {
+        if (studentCountdownTimer) clearInterval(studentCountdownTimer);
+        updateStudentCountdown();
+        studentCountdownTimer = setInterval(updateStudentCountdown, 1000);
     }
 
     window.onload = function() {
@@ -208,7 +276,9 @@
         .then(r => r.json())
         .then(data => {
             if (data.status === "success") {
-                globalSettings = data.settings;
+                globalSettings = data.settings || globalSettings;
+                if (!globalSettings.sessionStart) globalSettings.sessionStart = "15:40";
+                if (!globalSettings.sessionDurationMin) globalSettings.sessionDurationMin = 60;
                 
                 roomSelect.innerHTML = "";
                 if (globalSettings.rooms && globalSettings.rooms.length > 0) {
@@ -225,6 +295,7 @@
                 document.getElementById("displayRevCount").innerText = globalSettings.revisionCount;
                 document.getElementById("queueRevCount").innerText = globalSettings.revisionCount;
                 document.getElementById("queueTestCount").innerText = globalSettings.testCount + " 句";
+                startStudentCountdown();
             } else {
                 roomSelect.innerHTML = '<option value="">載入失敗：' + data.message + '</option>';
             }
