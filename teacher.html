@@ -63,10 +63,48 @@
     <h1>👨‍🏫 NVN 總司令講台控制面板</h1>
     <div class="subtitle">HO YU COLLEGE • 英語純紙筆默寫即時批改系統 (V1.07)</div>
 
+    <!-- 倒數計時器 -->
+    <div id="timerBar" style="background: linear-gradient(135deg, #2b6cb0, #2c5282); padding: 14px 20px; border-radius: 10px; margin-bottom: 15px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid #4299e1;">
+        <div style="font-weight: bold; color: #bee3f8; font-size: 15px;">⏱️ 功課提升班剩餘時間</div>
+        <div id="timerDisplay" style="font-size: 28px; font-weight: bold; color: #fff; letter-spacing: 2px; font-variant-numeric: tabular-nums;">--:--</div>
+        <div id="timerRangeLabel" style="font-size: 13px; color: #a0aec0;">時段載入中...</div>
+    </div>
+
     <div class="config-bar">
-        <div class="config-item">📊 當前雲端參數設定：</div>
-        <div class="config-item">📖 學生溫習題數：<span id="cfgRevCount" style="color:#fbd38d; font-weight:bold;">載入中...</span> 題</div>
-        <div class="config-item">🎯 抽問抽考題數：<span id="cfgTestCount" style="color:#fbd38d; font-weight:bold;">載入中...</span> 題</div>
+        <div class="config-item">📊 當前雲端參數：</div>
+        <div class="config-item">📖 溫習題數：<span id="cfgRevCount" style="color:#fbd38d; font-weight:bold;">-</span></div>
+        <div class="config-item">🎯 抽考題數：<span id="cfgTestCount" style="color:#fbd38d; font-weight:bold;">-</span></div>
+        <div class="config-item">🕐 時段：<span id="cfgSession" style="color:#fbd38d; font-weight:bold;">-</span></div>
+        <button type="button" onclick="toggleSettingsPanel()" style="background:#4a5568; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:13px;">⚙️ 修改設定</button>
+    </div>
+
+    <!-- 設定面板 -->
+    <div id="settingsPanel" class="hidden" style="background:#2d3748; padding:18px; border-radius:10px; margin-bottom:18px; border:1px solid #4a5568;">
+        <div style="font-weight:bold; color:#63b3ed; margin-bottom:12px; font-size:16px;">⚙️ 系統設定（儲存後即時生效）</div>
+        <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end;">
+            <div>
+                <label style="display:block; font-size:12px; color:#a0aec0; margin-bottom:4px;">課室（逗號分隔）</label>
+                <input id="setRooms" type="text" style="padding:10px; border-radius:6px; background:#1a202c; color:white; border:1px solid #4a5568; min-width:200px;" placeholder="例如 A101,A102">
+            </div>
+            <div>
+                <label style="display:block; font-size:12px; color:#a0aec0; margin-bottom:4px;">溫習題數</label>
+                <input id="setRevCount" type="number" min="1" max="20" style="padding:10px; width:80px; border-radius:6px; background:#1a202c; color:white; border:1px solid #4a5568;">
+            </div>
+            <div>
+                <label style="display:block; font-size:12px; color:#a0aec0; margin-bottom:4px;">抽考題數</label>
+                <input id="setTestCount" type="number" min="1" max="10" style="padding:10px; width:80px; border-radius:6px; background:#1a202c; color:white; border:1px solid #4a5568;">
+            </div>
+            <div>
+                <label style="display:block; font-size:12px; color:#a0aec0; margin-bottom:4px;">開始時間 (HH:MM)</label>
+                <input id="setSessionStart" type="time" style="padding:10px; border-radius:6px; background:#1a202c; color:white; border:1px solid #4a5568;">
+            </div>
+            <div>
+                <label style="display:block; font-size:12px; color:#a0aec0; margin-bottom:4px;">時長（分鐘）</label>
+                <input id="setSessionDuration" type="number" min="10" max="300" style="padding:10px; width:90px; border-radius:6px; background:#1a202c; color:white; border:1px solid #4a5568;">
+            </div>
+            <button type="button" onclick="saveSettings()" style="background:#38a169; color:white; border:none; padding:12px 20px; border-radius:6px; font-weight:bold; cursor:pointer;">💾 儲存設定</button>
+        </div>
+        <p style="color:#a0aec0; font-size:12px; margin:12px 0 0 0;">預設 15:40 開始、時長 60 分鐘（即 16:40 結束）。Settings 分頁可手動改：SessionStart、SessionDuration。</p>
     </div>
 
     <div id="roomSelectBar" style="background: #2d3748; padding: 15px; border-radius: 8px; margin-bottom: 25px; display: flex; align-items: center; gap: 12px; border: 1px solid #4a5568; flex-wrap: wrap;">
@@ -126,21 +164,22 @@
             <span style="font-weight:bold; color:#63b3ed;">📥 匯出當日紀錄：</span>
             <input type="date" id="exportDate" style="padding:10px 12px; font-size:15px; border-radius:6px; background:#1a202c; color:white; border:1px solid #4a5568;">
             <button class="btn" style="background:#38a169; color:white; padding:10px 20px; font-size:15px; width:auto;" onclick="exportDailyRecords()">下載 CSV</button>
-            <span style="color:#a0aec0; font-size:13px;">欄位：Class, ClassNumber, Name, Record (Pass/Fail), Attempts</span>
+            <span style="color:#a0aec0; font-size:13px;">欄位：Class, ClassNumber, Name, SID, Record, Attempts</span>
         </div>
         
         <table class="queue-table">
             <thead>
                 <tr>
                     <th width="10%">狀態</th>
-                    <th width="15%">班別 (學號)</th>
-                    <th width="20%">學生姓名</th>
-                    <th width="20%">目前秘密級別</th>
-                    <th width="35%">操作</th>
+                    <th width="14%">班別 (學號)</th>
+                    <th width="16%">學生姓名</th>
+                    <th width="12%">今日已試</th>
+                    <th width="14%">秘密級別</th>
+                    <th width="34%">操作</th>
                 </tr>
             </thead>
             <tbody id="queueTableBody">
-                <tr><td colspan="5" class="empty-msg">正在連線至雲端獲取名單...</td></tr>
+                <tr><td colspan="6" class="empty-msg">正在連線至雲端獲取名單...</td></tr>
             </tbody>
         </table>
     </div>
@@ -151,9 +190,10 @@
 
     let currentQueue = [];
     let selectedStudent = null;
-    let systemSettings = { rooms: [], revisionCount: 8, testCount: 4 };
+    let systemSettings = { rooms: [], revisionCount: 8, testCount: 4, sessionStart: "15:40", sessionDurationMin: 60 };
     let answersRevealed = false;
     let pollTimer = null;
+    let countdownTimer = null;
     const POLL_INTERVAL = 60000; // 60 秒
 
     window.onload = function() {
@@ -165,6 +205,110 @@
         }
         loadInitSettings();
     };
+
+    function getSessionBounds() {
+        const startStr = systemSettings.sessionStart || "15:40";
+        const duration = parseInt(systemSettings.sessionDurationMin) || 60;
+        const parts = startStr.split(":");
+        const h = parseInt(parts[0]) || 15;
+        const m = parseInt(parts[1]) || 40;
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0);
+        const end = new Date(start.getTime() + duration * 60 * 1000);
+        return { start: start, end: end, startStr: startStr, duration: duration };
+    }
+
+    function formatEndTime(end) {
+        return String(end.getHours()).padStart(2,"0") + ":" + String(end.getMinutes()).padStart(2,"0");
+    }
+
+    function updateCountdown() {
+        const bounds = getSessionBounds();
+        const now = new Date();
+        const display = document.getElementById("timerDisplay");
+        const rangeLabel = document.getElementById("timerRangeLabel");
+        const bar = document.getElementById("timerBar");
+        if (!display) return;
+
+        if (rangeLabel) {
+            rangeLabel.innerText = bounds.startStr + " – " + formatEndTime(bounds.end) + "（" + bounds.duration + " 分鐘）";
+        }
+
+        if (now < bounds.start) {
+            const diff = Math.floor((bounds.start - now) / 1000);
+            const mm = Math.floor(diff / 60);
+            const ss = diff % 60;
+            display.innerText = "尚未開始 " + String(mm).padStart(2,"0") + ":" + String(ss).padStart(2,"0");
+            display.style.color = "#fbd38d";
+            if (bar) bar.style.background = "linear-gradient(135deg, #744210, #975a16)";
+            return;
+        }
+        if (now >= bounds.end) {
+            display.innerText = "時間已結束 00:00";
+            display.style.color = "#fc8181";
+            if (bar) bar.style.background = "linear-gradient(135deg, #742a2a, #9b2c2c)";
+            return;
+        }
+        const diff = Math.floor((bounds.end - now) / 1000);
+        const mm = Math.floor(diff / 60);
+        const ss = diff % 60;
+        display.innerText = String(mm).padStart(2,"0") + ":" + String(ss).padStart(2,"0");
+        if (diff <= 300) {
+            display.style.color = "#fc8181";
+            if (bar) bar.style.background = "linear-gradient(135deg, #c53030, #9b2c2c)";
+        } else {
+            display.style.color = "#fff";
+            if (bar) bar.style.background = "linear-gradient(135deg, #2b6cb0, #2c5282)";
+        }
+    }
+
+    function startCountdown() {
+        if (countdownTimer) clearInterval(countdownTimer);
+        updateCountdown();
+        countdownTimer = setInterval(updateCountdown, 1000);
+    }
+
+    function toggleSettingsPanel() {
+        document.getElementById("settingsPanel").classList.toggle("hidden");
+    }
+
+    function fillSettingsForm() {
+        document.getElementById("setRooms").value = (systemSettings.rooms || []).join(",");
+        document.getElementById("setRevCount").value = systemSettings.revisionCount || 8;
+        document.getElementById("setTestCount").value = systemSettings.testCount || 4;
+        document.getElementById("setSessionStart").value = systemSettings.sessionStart || "15:40";
+        document.getElementById("setSessionDuration").value = systemSettings.sessionDurationMin || 60;
+    }
+
+    function saveSettings() {
+        const rooms = document.getElementById("setRooms").value.trim();
+        const revisionCount = parseInt(document.getElementById("setRevCount").value) || 8;
+        const testCount = parseInt(document.getElementById("setTestCount").value) || 4;
+        const sessionStart = document.getElementById("setSessionStart").value || "15:40";
+        const sessionDurationMin = parseInt(document.getElementById("setSessionDuration").value) || 60;
+
+        fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify({
+                action: "updateSettings",
+                rooms: rooms,
+                revisionCount: revisionCount,
+                testCount: testCount,
+                sessionStart: sessionStart,
+                sessionDurationMin: sessionDurationMin
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === "success") {
+                alert("設定已儲存！");
+                loadInitSettings();
+            } else {
+                alert("儲存失敗：" + (data.message || ""));
+            }
+        })
+        .catch(err => alert("網路錯誤，無法儲存設定。"));
+    }
 
     function startPoll() {
         clearInterval(pollTimer);
@@ -184,15 +328,20 @@
         .then(r => r.json())
         .then(data => {
             if(data.status === "success") {
-                systemSettings = data.settings;
+                systemSettings = data.settings || systemSettings;
+                if (!systemSettings.sessionStart) systemSettings.sessionStart = "15:40";
+                if (!systemSettings.sessionDurationMin) systemSettings.sessionDurationMin = 60;
                 
                 document.getElementById("cfgRevCount").innerText = systemSettings.revisionCount;
                 document.getElementById("cfgTestCount").innerText = systemSettings.testCount;
+                const bounds = getSessionBounds();
+                document.getElementById("cfgSession").innerText = (systemSettings.sessionStart || "15:40") + "–" + formatEndTime(bounds.end);
                 
                 const roomSelect = document.getElementById("teacherRoom");
+                const prevRoom = roomSelect.value;
                 roomSelect.innerHTML = '<option value="ALL">顯示所有課室 (全部名單)</option>';
                 
-                systemSettings.rooms.forEach(room => {
+                (systemSettings.rooms || []).forEach(room => {
                     if(room) {
                         const opt = document.createElement("option");
                         opt.value = room;
@@ -200,7 +349,10 @@
                         roomSelect.appendChild(opt);
                     }
                 });
+                if (prevRoom) roomSelect.value = prevRoom;
 
+                fillSettingsForm();
+                startCountdown();
                 fetchQueue();
                 startPoll(); 
             } else {
@@ -253,7 +405,7 @@
         document.getElementById("queueCount").innerText = currentQueue.length;
         
         if(currentQueue.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">☕ 目前該課室沒有學生在排隊。</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-msg">☕ 目前該課室沒有學生在排隊。</td></tr>';
             return;
         }
 
@@ -261,11 +413,13 @@
         currentQueue.forEach(student => {
             const tr = document.createElement("tr");
             tr.onclick = () => selectStudentForTest(student);
+            const attempts = (student.attempts != null) ? student.attempts : 0;
             
             tr.innerHTML = `
                 <td><span class="badge-live">等待中</span></td>
                 <td><strong>${student.className}班</strong> (${student.classNumber}號)<br><span style="color:#fc8181; font-size:12px;">📍 前往: ${student.room}</span></td>
                 <td><span style="font-size:18px; font-weight:bold; color:#63b3ed;">${student.name}</span></td>
+                <td><span style="background:#553c9a; color:white; padding:4px 10px; border-radius:4px; font-weight:bold;">${attempts} 次</span></td>
                 <td><span class="badge-lv">${student.level}</span></td>
                 <td><button style="background:#3182ce; color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:bold;">🎯 開始測試</button></td>
             `;
