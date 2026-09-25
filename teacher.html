@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NVN 總司令講台控制面板 (教師端) V1.10</title>
+    <title>NVN 總司令講台控制面板 (教師端) V1.11</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background-color: #1a202c; color: #edf2f7; }
         .container { max-width: 1000px; margin: 0 auto; }
@@ -445,7 +445,7 @@
         
         document.getElementById("focusArea").style.display = "block";
         document.getElementById("fStudent").innerText = `${student.className}班 ${student.name} (於 ${student.room} 課室)`;
-        document.getElementById("fSid").innerText = `(電郵: ${student.sid})`;
+        document.getElementById("fSid").innerText = `(學號: ${student.sid})`;
         
         document.getElementById("actionLevel").value = student.level;
         
