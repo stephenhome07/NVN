@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V1.09 NVN 句子溫習系統 (學生端)</title>
+    <title>V1.10 NVN 句子溫習系統 (學生端)</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; background-color: #f4f6f7; color: #333; }
         .container { max-width: 650px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin: 0 auto; position: relative; }
@@ -97,8 +97,8 @@
     <h2>🎯 NVN 句子溫習系統</h2>
 
     <div id="loginSection" class="card">
-        <label for="studentSid">請輸入你的學校電郵登入：</label>
-        <input type="text" id="studentSid" placeholder="例如: s19010040@hoyu.edu.hk">
+        <label for="studentSid">請輸入你的學生編號登入：</label>
+        <input type="text" id="studentSid" placeholder="例如: s19051234" autocomplete="username">
         
         <label for="studentRoom" style="color: #2c3e50; font-size: 15px; margin-top: 15px;">📍 請選擇你正前往哪一個課室搵老師默寫：</label>
         <select id="studentRoom" style="font-weight: bold; color: #2d3748; background: white;">
@@ -306,11 +306,13 @@
     }
 
     function loginStudent() {
-        const sid = document.getElementById("studentSid").value.trim();
+        // 只需學生編號；若誤輸入完整電郵會自動去掉 @ 後面
+        let sid = document.getElementById("studentSid").value.trim().toLowerCase();
+        if (sid.indexOf("@") !== -1) sid = sid.split("@")[0];
         const room = document.getElementById("studentRoom").value;
         const statusDiv = document.getElementById("loginStatus");
         
-        if(!sid) { alert("請輸入學校電郵！"); return; }
+        if(!sid) { alert("請輸入學生編號！例如 s19051234"); return; }
         if(!room) { alert("請選擇你目前前往的課室！"); return; }
 
         const confirmMsg = "【重要提醒】\n\n" +
