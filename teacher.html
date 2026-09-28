@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NVN 總司令講台控制面板 (教師端) V1.11</title>
+    <title>NVN 總司令講台控制面板 (教師端) V1.12</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background-color: #1a202c; color: #edf2f7; }
         .container { max-width: 1000px; margin: 0 auto; }
@@ -15,7 +15,8 @@
 
         .focus-card { background: #2d3748; border: 3px solid #4299e1; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .focus-title { font-size: 22px; font-weight: bold; color: #fbd38d; border-bottom: 1px solid #4a5568; padding-bottom: 10px; margin-bottom: 15px; }
-        .test-question { background: #1a202c; padding: 15px; border-radius: 8px; margin-bottom: 12px; border-left: 6px solid #48bb78; }
+        .test-question { background: #1a202c; padding: 18px; border-radius: 8px; margin-bottom: 14px; border-left: 6px solid #48bb78; }
+        .chi-prompt { font-size: 28px; color: #fbd38d; font-weight: bold; line-height: 1.45; margin-bottom: 10px; letter-spacing: 0.5px; }
         .rev-sentence { background: #1a202c; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; border-left: 5px solid #ed8936; font-size: 16px; }
         .eng-ans { font-size: 20px; font-weight: bold; color: #fff; letter-spacing: 0.5px; }
         .chi-hint { font-size: 16px; color: #cbd5e0; margin-top: 5px; font-style: italic; }
@@ -136,7 +137,7 @@
 
             <div class="control-row">
                 <label style="font-weight:bold; color:#cbd5e0;">🤫 秘密評級調整：</label>
-                <select id="actionLevel" class="level-select">
+                <select id="actionLevel" class="level-select" onchange="onLevelDropdownChange()">
                     <option value="LV1">LV1: 香港小一至小三</option>
                     <option value="LV2">LV2: 香港小四至小六</option>
                     <option value="LV3">LV3: 香港中一至中二</option>
@@ -432,13 +433,32 @@
             "開始測試前請確認：\n\n" +
             "1. 已收下該學生抄寫的 8 句英文紙（作為入場票）；\n" +
             "2. 可以正式叫該學生走到講台開始默書。\n\n" +
-            "確認後將顯示該生的 8 句溫習內容供核對。";
+            "確認後：該生會即時移出排隊名單（其他老師不會再叫到）。";
         if (!confirm(confirmMsg)) return;
 
+        // 先通知後端改為「測試中」，避免其他老師重複叫名
+        fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "startTest", sid: student.sid })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status !== "success") {
+                alert(data.message || "無法開始測試，請更新名單後再試。");
+                fetchQueue();
+                return;
+            }
+            openTestFocus(student);
+        })
+        .catch(err => {
+            alert("網路錯誤，無法鎖定該生。請稍後再試。");
+        });
+    }
+
+    function openTestFocus(student) {
         selectedStudent = student;
         answersRevealed = false;
         
-        // 停止輪詢 + 隱藏排隊區
         stopPoll();
         document.getElementById("queueArea").classList.add("hidden");
         document.getElementById("roomSelectBar").classList.add("hidden");
@@ -449,11 +469,9 @@
         
         document.getElementById("actionLevel").value = student.level;
         
-        // 顯示 8 句核對區，隱藏測試區
         document.getElementById("revisionCheckSection").classList.remove("hidden");
         document.getElementById("testSection").classList.add("hidden");
         
-        // 渲染 8 句溫習句子
         const revContainer = document.getElementById("revisionSentencesContainer");
         revContainer.innerHTML = "";
         const revs = student.revisionSentences || [];
@@ -504,11 +522,11 @@
             qDiv.className = "test-question";
             
             qDiv.innerHTML = `
-                <div class="chi-hint" style="font-size: 18px; color: #cbd5e0; font-weight: bold; margin-bottom: 8px;">
-                    📢 第 ${count} 題提示：${chinese}
-                    <button onclick="speakText('${english.replace(/'/g, "\\'")}')" style="background:#9b59b6; color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer; margin-left:12px; font-size:14px; font-weight:bold;">🔊 播放讀音</button>
+                <div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:8px;">
+                    <div class="chi-prompt">📢 第 ${count} 題：${chinese}</div>
+                    <button onclick="speakText('${english.replace(/'/g, "\\'")}')" style="background:#9b59b6; color:white; border:none; padding:10px 16px; border-radius:6px; cursor:pointer; font-size:15px; font-weight:bold; flex-shrink:0;">🔊 播放讀音</button>
                 </div>
-                <div class="eng-ans" style="display: none; font-size: 20px; font-weight: bold; color: #63b3ed; letter-spacing: 0.5px; background:#1a202c; padding:10px; border-radius:6px; border: 1px dashed #4a5568;">💡 正確答案：${english}</div>
+                <div class="eng-ans" style="display: none; font-size: 22px; font-weight: bold; color: #63b3ed; letter-spacing: 0.5px; background:#0d1117; padding:12px; border-radius:6px; border: 1px dashed #4a5568;">💡 正確答案：${english}</div>
             `;
             container.appendChild(qDiv);
             count++;
@@ -536,57 +554,48 @@
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'en-US';
-        utterance.rate = 0.85; 
+        utterance.rate = 0.5; // 減慢至約 50%
         window.speechSynthesis.speak(utterance);
     }
 
-    function getNextLevel(current) {
-        const levels = ["LV1","LV2","LV3","LV4","LV5","LV6"];
-        const idx = levels.indexOf(current);
-        if (idx < 0 || idx >= levels.length - 1) return current;
-        return levels[idx + 1];
-    }
-    function getPrevLevel(current) {
-        const levels = ["LV1","LV2","LV3","LV4","LV5","LV6"];
-        const idx = levels.indexOf(current);
-        if (idx <= 0) return current;
-        return levels[idx - 1];
+    // 手動改 LV：先提示再確認；取消則還原
+    function onLevelDropdownChange() {
+        if (!selectedStudent) return;
+        const sel = document.getElementById("actionLevel");
+        const newLv = sel.value;
+        const oldLv = selectedStudent.level;
+        if (newLv === oldLv) return;
+        const ok = confirm(
+            "【調整秘密級別】\n\n" +
+            "目前級別：" + oldLv + "\n" +
+            "將改為：" + newLv + "\n\n" +
+            "確定要手動調整級別？\n（PASS 時會一併儲存；若改級會清除該生 CurrentBatch）"
+        );
+        if (!ok) {
+            sel.value = oldLv;
+        }
     }
 
     function submitAssessment(status) {
         if (!selectedStudent) return;
         
         let targetLevel = document.getElementById("actionLevel").value;
-        let finalConfirm = "";
-        let forceClearBatch = false; // 超過 1 小時 FAIL 時強制清除 Batch
+        const levelChanged = (targetLevel !== selectedStudent.level);
 
+        let finalConfirm = "";
         if (status === "Pass") {
-            const isFirstFast = confirm("【正式確認 - 合格】\n\n該生是否「第一次出來默寫」並且「在 30 分鐘內完成」？\n\n按「確定」= 是（將自動升一級）\n按「取消」= 否（維持原級別）");
-            if (isFirstFast) {
-                targetLevel = getNextLevel(selectedStudent.level);
-                finalConfirm = `確定為 ${selectedStudent.name} 送出【合格 (PASS)】並升至 ${targetLevel}？`;
-            } else {
-                targetLevel = selectedStudent.level;
-                finalConfirm = `確定為 ${selectedStudent.name} 送出【合格 (PASS)】並維持 ${targetLevel}？`;
+            finalConfirm = "確定為 " + selectedStudent.name + " 送出【合格 PASS】？\n准予放學／完成。";
+            if (levelChanged) {
+                finalConfirm += "\n\n級別將由 " + selectedStudent.level + " 改為 " + targetLevel + "。";
             }
         } else {
-            // FAIL：是否「已超過 1 小時，並已經過了功課提升班的時間」
-            const isOver1Hour = confirm("【正式確認 - 不合格】\n\n該生是否「已超過 1 小時，並已經過了功課提升班的時間」？\n\n按「確定」= 是（將自動降一級 + 強制清除 Batch，今次唔計數）\n按「取消」= 否（維持原級別，學生回位重練）");
-            if (isOver1Hour) {
-                targetLevel = getPrevLevel(selectedStudent.level);
-                forceClearBatch = true; // 強制清除 Batch，下次重新開始
-                finalConfirm = `確定為 ${selectedStudent.name} 送出【不合格 (FAIL)】並降至 ${targetLevel}？\n\n⚠️ 今次唔計數，已強制清除 Batch。\n請提醒學生：下次要再努力，需重新抄寫 8 句並重新排隊。`;
-            } else {
-                targetLevel = selectedStudent.level;
-                forceClearBatch = false;
-                finalConfirm = `確定為 ${selectedStudent.name} 送出【不合格 (FAIL)】並維持 ${targetLevel}？\n\n學生將返回座位重練，下次出來需重新抄寫 8 句並重新排隊。`;
+            finalConfirm = "確定為 " + selectedStudent.name + " 送出【不合格 FAIL】？\n學生回位重練（由抄寫開始，同一批句子）。";
+            if (levelChanged) {
+                finalConfirm += "\n\n級別將由 " + selectedStudent.level + " 改為 " + targetLevel + "（並清除 Batch）。";
             }
         }
 
         if (!confirm(finalConfirm)) return;
-
-        // 更新下拉選單顯示
-        document.getElementById("actionLevel").value = targetLevel;
 
         const btnPass = document.getElementById("btnPass");
         const btnFail = document.getElementById("btnFail");
@@ -600,8 +609,7 @@
                 sid: selectedStudent.sid,
                 resultStatus: status,
                 targetLevel: targetLevel,
-                forceClearBatch: forceClearBatch,
-                isLevelChange: (targetLevel !== selectedStudent.level)
+                forceClearBatch: false
             })
         })
         .then(r => r.json())
@@ -609,19 +617,13 @@
             if(btnPass) btnPass.disabled = false;
             if(btnFail) btnFail.disabled = false;
             if (data.status === "success") {
-                // 超過 1 小時 FAIL 時額外提醒老師
-                if (status === "Fail" && forceClearBatch) {
-                    alert("【提醒老師】\n\n已為學生降級並強制清除 Batch。\n今次唔計數。\n請口頭告知學生：下次要再努力啦！");
-                }
                 selectedStudent = null;
                 answersRevealed = false;
                 
-                // 返回排隊畫面
                 document.getElementById("focusArea").style.display = "none";
                 document.getElementById("queueArea").classList.remove("hidden");
                 document.getElementById("roomSelectBar").classList.remove("hidden");
                 
-                // 立即更新 + 重啟 60 秒輪詢
                 fetchQueue();
                 startPoll();
             } else {
