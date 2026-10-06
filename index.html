@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V2.01 NVN 句子溫習系統 (學生端)</title>
+    <title>V2.02 NVN 句子溫習系統 (學生端)</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; background-color: #f4f6f7; color: #333; }
         .container { max-width: 650px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin: 0 auto; position: relative; }
@@ -202,6 +202,13 @@
 
         <div id="stTestQuestions"></div>
 
+        <div style="margin-top:14px; margin-bottom:8px;">
+            <button type="button" id="stBtnRevealAnswers" onclick="studentRevealAnswers()" style="background:#e67e22; color:white; border:none; padding:12px 18px; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer; width:100%; max-width:360px;">
+                👁️ 顯示英文答案核對
+            </button>
+            <p style="color:#a0aec0; font-size:12px; margin:8px 0 0 0;">只可按一次，顯示後不可隱藏（防止偷看）。</p>
+        </div>
+
         <div style="display:flex; flex-wrap:wrap; gap:12px; margin-top:20px;">
             <button type="button" id="stBtnPass" onclick="studentSubmitResult('Pass')" style="flex:1; min-width:140px; background:#38a169; color:white; border:none; padding:16px; border-radius:8px; font-size:18px; font-weight:bold; cursor:pointer;">🎉 PASS 合格</button>
             <button type="button" id="stBtnFail" onclick="studentSubmitResult('Fail')" style="flex:1; min-width:140px; background:#e53e3e; color:white; border:none; padding:16px; border-radius:8px; font-size:18px; font-weight:bold; cursor:pointer;">❌ FAIL 不合格</button>
@@ -243,6 +250,7 @@
     let studentCountdownTimer = null;
     let studentTestSession = null; // { level, testQuestions, ... } 老師開咗測試後
     let studentTestOriginalLevel = null;
+    let studentAnswersRevealed = false;
 
     function showLoading(text) {
         document.getElementById("loadingText").innerText = text || "載入中，請稍候...";
@@ -650,6 +658,7 @@
     function openStudentTestUI(data) {
         studentTestSession = data;
         studentTestOriginalLevel = (data.student && data.student.level) ? String(data.student.level).trim().toUpperCase() : "LV1";
+        studentAnswersRevealed = false;
 
         document.getElementById("queueSection").classList.add("hidden");
         document.getElementById("mainSection").classList.add("hidden");
@@ -664,6 +673,15 @@
         const levelSel = document.getElementById("stActionLevel");
         levelSel.value = studentTestOriginalLevel;
 
+        // 重置「顯示答案」按鈕
+        const btnReveal = document.getElementById("stBtnRevealAnswers");
+        if (btnReveal) {
+            btnReveal.disabled = false;
+            btnReveal.innerText = "👁️ 顯示英文答案核對";
+            btnReveal.style.background = "#e67e22";
+            btnReveal.style.cursor = "pointer";
+        }
+
         const container = document.getElementById("stTestQuestions");
         container.innerHTML = "";
         const qs = data.testQuestions || [];
@@ -677,7 +695,8 @@
             div.style.cssText = "background:#2d3748; padding:16px; border-radius:8px; margin-bottom:12px; border-left:5px solid #48bb78;";
             div.innerHTML =
                 '<div style="font-size:26px; color:#fbd38d; font-weight:bold; line-height:1.4; margin-bottom:10px;">📢 第 ' + n + ' 題：' + escapeHtml(chi) + '</div>' +
-                '<button type="button" onclick="speakText(\'' + eng.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + '\')" style="background:#9b59b6; color:white; border:none; padding:10px 14px; border-radius:6px; font-weight:bold; cursor:pointer;">🔊 播放讀音</button>';
+                '<button type="button" onclick="speakText(\'' + eng.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + '\')" style="background:#9b59b6; color:white; border:none; padding:10px 14px; border-radius:6px; font-weight:bold; cursor:pointer;">🔊 播放讀音</button>' +
+                '<div class="st-eng-ans" style="display:none; margin-top:12px; font-size:20px; font-weight:bold; color:#63b3ed; background:#0d1117; padding:12px; border-radius:6px; border:1px dashed #4a5568;">💡 正確答案：' + escapeHtml(eng) + '</div>';
             container.appendChild(div);
             n++;
         });
@@ -688,6 +707,26 @@
         document.getElementById("stBtnPass").disabled = false;
         document.getElementById("stBtnFail").disabled = false;
         window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    /** 顯示英文答案：只可一次，之後永久鎖定不可隱藏 */
+    function studentRevealAnswers() {
+        if (studentAnswersRevealed) return;
+        const ok = confirm("【對答案】\n\n確定顯示全部英文答案？\n顯示後不可再隱藏。");
+        if (!ok) return;
+
+        document.querySelectorAll(".st-eng-ans").forEach(function(el) {
+            el.style.display = "block";
+        });
+        studentAnswersRevealed = true;
+
+        const btn = document.getElementById("stBtnRevealAnswers");
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = "✅ 答案已顯示（不可再隱藏）";
+            btn.style.background = "#718096";
+            btn.style.cursor = "not-allowed";
+        }
     }
 
     function escapeHtml(str) {
@@ -787,6 +826,7 @@
         mySentences = [];
         studentTestSession = null;
         studentTestOriginalLevel = null;
+        studentAnswersRevealed = false;
         
         const btn = document.getElementById("btnJoinQueue");
         if(btn) {
