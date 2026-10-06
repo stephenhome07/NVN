@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V1.07 NVN 句子溫習系統 (學生端)</title>
+    <title>V2.01 NVN 句子溫習系統 (學生端)</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; background-color: #f4f6f7; color: #333; }
         .container { max-width: 650px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin: 0 auto; position: relative; }
@@ -160,9 +160,23 @@
         <!-- 僅老師操作：輸入密碼後開啟默書介面 -->
         <div style="background:#2d3748; border-radius:10px; padding:18px; margin:18px 0; text-align:center;">
             <p style="color:#fbd38d; font-weight:bold; margin:0 0 10px 0; font-size:15px;">🔐 以下按鈕只供老師使用</p>
-            <button type="button" onclick="teacherUnlockTest()" style="background:#9b59b6; color:white; border:none; padding:14px 22px; border-radius:8px; font-size:17px; font-weight:bold; cursor:pointer; width:100%; max-width:320px;">
+            <button type="button" onclick="openTeacherPasswordModal()" style="background:#9b59b6; color:white; border:none; padding:14px 22px; border-radius:8px; font-size:17px; font-weight:bold; cursor:pointer; width:100%; max-width:320px;">
                 老師開始測試（需密碼）
             </button>
+        </div>
+
+        <!-- 老師密碼（type=password，顯示為圓點／星號） -->
+        <div id="teacherPwModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center;">
+            <div style="background:white; border-radius:12px; padding:24px 20px; width:90%; max-width:360px; box-shadow:0 8px 30px rgba(0,0,0,0.25); text-align:left;">
+                <h3 style="margin:0 0 8px 0; color:#2d3748; font-size:18px;">🔐 老師專用</h3>
+                <p style="margin:0 0 14px 0; color:#718096; font-size:14px;">請輸入密碼以開始默書（輸入時會隱藏）</p>
+                <input type="password" id="teacherPwInput" autocomplete="off" inputmode="numeric" placeholder="輸入密碼"
+                    style="width:100%; box-sizing:border-box; padding:12px 14px; font-size:18px; border:2px solid #cbd5e0; border-radius:8px; letter-spacing:3px;">
+                <div style="display:flex; gap:10px; margin-top:16px;">
+                    <button type="button" onclick="closeTeacherPasswordModal()" style="flex:1; padding:12px; border:none; border-radius:8px; background:#e2e8f0; color:#2d3748; font-weight:bold; cursor:pointer;">取消</button>
+                    <button type="button" onclick="confirmTeacherPassword()" style="flex:1; padding:12px; border:none; border-radius:8px; background:#9b59b6; color:white; font-weight:bold; cursor:pointer;">確認</button>
+                </div>
+            </div>
         </div>
         
         <button class="btn-manual-refresh" id="btnManualRefresh" onclick="manualCheckStatus()">🔄 立即更新狀態</button>
@@ -561,16 +575,51 @@
         }, 2000);
     }
 
-    // —— 學生機默書（老師輸入密碼）——
-    function teacherUnlockTest() {
+    // —— 學生機默書（老師輸入密碼，隱藏顯示）——
+    function openTeacherPasswordModal() {
         if (!currentStudent) {
             alert("請先登入並排隊。");
             return;
         }
-        const pw = prompt("【老師專用】\n請輸入老師密碼以開始默書：");
-        if (pw === null) return;
-        if (!String(pw).trim()) {
+        const modal = document.getElementById("teacherPwModal");
+        const input = document.getElementById("teacherPwInput");
+        modal.style.display = "flex";
+        input.value = "";
+        setTimeout(function() { input.focus(); }, 50);
+    }
+
+    function closeTeacherPasswordModal() {
+        document.getElementById("teacherPwModal").style.display = "none";
+        document.getElementById("teacherPwInput").value = "";
+    }
+
+    function confirmTeacherPassword() {
+        const pw = String(document.getElementById("teacherPwInput").value || "").trim();
+        if (!pw) {
             alert("請輸入密碼。");
+            return;
+        }
+        closeTeacherPasswordModal();
+        teacherUnlockTest(pw);
+    }
+
+    // Enter 鍵提交密碼
+    document.addEventListener("DOMContentLoaded", function() {
+        const input = document.getElementById("teacherPwInput");
+        if (input) {
+            input.addEventListener("keydown", function(e) {
+                if (e.key === "Enter") confirmTeacherPassword();
+            });
+        }
+    });
+
+    function teacherUnlockTest(pw) {
+        if (!currentStudent) {
+            alert("請先登入並排隊。");
+            return;
+        }
+        if (!pw) {
+            openTeacherPasswordModal();
             return;
         }
 
