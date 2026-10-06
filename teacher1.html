@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NVN 總司令講台控制面板 (教師端) V1.12</title>
+    <title>NVN 總司令講台控制面板 (教師端) V1.07</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background-color: #1a202c; color: #edf2f7; }
         .container { max-width: 1000px; margin: 0 auto; }
@@ -103,9 +103,13 @@
                 <label style="display:block; font-size:12px; color:#a0aec0; margin-bottom:4px;">時長（分鐘）</label>
                 <input id="setSessionDuration" type="number" min="10" max="300" style="padding:10px; width:90px; border-radius:6px; background:#1a202c; color:white; border:1px solid #4a5568;">
             </div>
+            <div>
+                <label style="display:block; font-size:12px; color:#a0aec0; margin-bottom:4px;">學生機開始測試密碼</label>
+                <input id="setTeacherPassword" type="text" style="padding:10px; border-radius:6px; background:#1a202c; color:white; border:1px solid #4a5568; min-width:140px;" placeholder="預設 21091001" autocomplete="off">
+            </div>
             <button type="button" onclick="saveSettings()" style="background:#38a169; color:white; border:none; padding:12px 20px; border-radius:6px; font-weight:bold; cursor:pointer;">💾 儲存設定</button>
         </div>
-        <p style="color:#a0aec0; font-size:12px; margin:12px 0 0 0;">預設 15:40 開始、時長 60 分鐘（即 16:40 結束）。Settings 分頁可手動改：SessionStart、SessionDuration。</p>
+        <p style="color:#a0aec0; font-size:12px; margin:12px 0 0 0;">預設 15:40 開始、時長 60 分鐘。學生機「老師開始測試」密碼預設 <strong style="color:#fbd38d;">21091001</strong>（可於此修改）。默書請在學生 iPad 操作。</p>
     </div>
 
     <div id="roomSelectBar" style="background: #2d3748; padding: 15px; border-radius: 8px; margin-bottom: 25px; display: flex; align-items: center; gap: 12px; border: 1px solid #4a5568; flex-wrap: wrap;">
@@ -279,6 +283,7 @@
         document.getElementById("setTestCount").value = systemSettings.testCount || 4;
         document.getElementById("setSessionStart").value = systemSettings.sessionStart || "15:40";
         document.getElementById("setSessionDuration").value = systemSettings.sessionDurationMin || 60;
+        document.getElementById("setTeacherPassword").value = systemSettings.teacherPassword || "21091001";
     }
 
     function saveSettings() {
@@ -287,6 +292,7 @@
         const testCount = parseInt(document.getElementById("setTestCount").value) || 4;
         const sessionStart = document.getElementById("setSessionStart").value || "15:40";
         const sessionDurationMin = parseInt(document.getElementById("setSessionDuration").value) || 60;
+        const teacherPassword = document.getElementById("setTeacherPassword").value.trim() || "21091001";
 
         fetch(GAS_URL, {
             method: "POST",
@@ -296,7 +302,8 @@
                 revisionCount: revisionCount,
                 testCount: testCount,
                 sessionStart: sessionStart,
-                sessionDurationMin: sessionDurationMin
+                sessionDurationMin: sessionDurationMin,
+                teacherPassword: teacherPassword
             })
         })
         .then(r => r.json())
@@ -324,7 +331,7 @@
     function loadInitSettings() {
         fetch(GAS_URL, {
             method: "POST",
-            body: JSON.stringify({ action: "getInitData" })
+            body: JSON.stringify({ action: "getInitData", forTeacher: true })
         })
         .then(r => r.json())
         .then(data => {
@@ -332,6 +339,7 @@
                 systemSettings = data.settings || systemSettings;
                 if (!systemSettings.sessionStart) systemSettings.sessionStart = "15:40";
                 if (!systemSettings.sessionDurationMin) systemSettings.sessionDurationMin = 60;
+                if (!systemSettings.teacherPassword) systemSettings.teacherPassword = "21091001";
                 
                 document.getElementById("cfgRevCount").innerText = systemSettings.revisionCount;
                 document.getElementById("cfgTestCount").innerText = systemSettings.testCount;
