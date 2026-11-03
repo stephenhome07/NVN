@@ -165,11 +165,19 @@
         <p style="color:#a0aec0; font-size:13px; margin:-5px 0 15px 0;">系統約每 60 秒自動更新一次。建議在叫名前手動按「立即更新名單」。</p>
         
         <!-- Export 當日紀錄 -->
-        <div style="background:#232d3f; padding:15px 18px; border-radius:8px; margin-bottom:20px; display:flex; flex-wrap:wrap; align-items:center; gap:12px; border:1px solid #4a5568;">
+        <div style="background:#232d3f; padding:15px 18px; border-radius:8px; margin-bottom:14px; display:flex; flex-wrap:wrap; align-items:center; gap:12px; border:1px solid #4a5568;">
             <span style="font-weight:bold; color:#63b3ed;">📥 匯出當日紀錄：</span>
             <input type="date" id="exportDate" style="padding:10px 12px; font-size:15px; border-radius:6px; background:#1a202c; color:white; border:1px solid #4a5568;">
             <button class="btn" style="background:#38a169; color:white; padding:10px 20px; font-size:15px; width:auto;" onclick="exportDailyRecords()">下載 CSV</button>
             <span style="color:#a0aec0; font-size:13px;">欄位：Class, ClassNumber, Name, SID, Record, Attempts, LeaveTime（PASS 准予離開時間）</span>
+        </div>
+
+        <!-- 強制釋放（學生卡在排隊／測試畫面） -->
+        <div style="background:#3b1f1f; padding:15px 18px; border-radius:8px; margin-bottom:20px; display:flex; flex-wrap:wrap; align-items:center; gap:12px; border:1px solid #c53030;">
+            <span style="font-weight:bold; color:#fc8181;">🔓 強制釋放學生：</span>
+            <input type="text" id="releaseSidInput" placeholder="輸入學號 例如 s19051234" style="padding:10px 12px; font-size:15px; border-radius:6px; background:#1a202c; color:white; border:1px solid #4a5568; min-width:200px;">
+            <button type="button" class="btn" style="background:#e53e3e; color:white; padding:10px 18px; font-size:15px; width:auto;" onclick="forceReleaseBySid()">一鍵釋放</button>
+            <span style="color:#a0aec0; font-size:13px;">用於：一登入就跳去排隊畫面、卡死無法重溫。釋放後學生重新登入即可。</span>
         </div>
         
         <table class="queue-table">
@@ -414,25 +422,92 @@
         document.getElementById("queueCount").innerText = currentQueue.length;
         
         if(currentQueue.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="empty-msg">☕ 目前該課室沒有學生在排隊。</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-msg">☕ 目前該課室沒有學生在排隊／測試中。</td></tr>';
             return;
         }
 
         tbody.innerHTML = "";
         currentQueue.forEach(student => {
             const tr = document.createElement("tr");
-            tr.onclick = () => selectStudentForTest(student);
             const attempts = (student.attempts != null) ? student.attempts : 0;
-            
+            const qSt = student.queueStatus || "排隊中";
+            const isTesting = (qSt === "測試中");
+            const statusBadge = isTesting
+                ? '<span style="background:#dd6b20; color:white; padding:4px 10px; border-radius:4px; font-weight:bold; font-size:12px;">測試中</span>'
+                : '<span class="badge-live">等待中</span>';
+            const startBtn = isTesting
+                ? '<span style="color:#a0aec0; font-size:12px;">（已開始）</span>'
+                : '<button type="button" data-action="start" style="background:#3182ce; color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; cursor:pointer;">🎯 開始測試</button>';
+
             tr.innerHTML = `
-                <td><span class="badge-live">等待中</span></td>
-                <td><strong>${student.className}班</strong> (${student.classNumber}號)<br><span style="color:#fc8181; font-size:12px;">📍 前往: ${student.room}</span></td>
+                <td>${statusBadge}</td>
+                <td><strong>${student.className}班</strong> (${student.classNumber}號)<br><span style="color:#fc8181; font-size:12px;">📍 ${student.room}</span><br><span style="color:#718096; font-size:11px;">${student.sid || ""}</span></td>
                 <td><span style="font-size:18px; font-weight:bold; color:#63b3ed;">${student.name}</span></td>
                 <td><span style="background:#553c9a; color:white; padding:4px 10px; border-radius:4px; font-weight:bold;">${attempts} 次</span></td>
                 <td><span class="badge-lv">${student.level}</span></td>
-                <td><button style="background:#3182ce; color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:bold;">🎯 開始測試</button></td>
+                <td style="white-space:nowrap;">
+                    ${startBtn}
+                    <button type="button" data-action="release" style="background:#e53e3e; color:white; border:none; padding:6px 10px; border-radius:4px; font-weight:bold; cursor:pointer; margin-left:6px;">🔓 釋放</button>
+                </td>
             `;
+            tr.querySelectorAll("button").forEach(btn => {
+                btn.addEventListener("click", function(e) {
+                    e.stopPropagation();
+                    const act = btn.getAttribute("data-action");
+                    if (act === "start") selectStudentForTest(student);
+                    if (act === "release") forceReleaseStudent(student);
+                });
+            });
             tbody.appendChild(tr);
+        });
+    }
+
+    function forceReleaseStudent(student) {
+        if (!student || !student.sid) return;
+        const ok = confirm(
+            "【強制釋放】\n\n" +
+            "學生：" + student.name + "（" + student.sid + "）\n" +
+            "狀態：" + (student.queueStatus || "排隊中") + "\n\n" +
+            "釋放後，該生重新登入會回到溫習畫面，可重新抄寫／排隊。\n確定釋放？"
+        );
+        if (!ok) return;
+        doForceRelease(student.sid);
+    }
+
+    function forceReleaseBySid() {
+        const input = document.getElementById("releaseSidInput");
+        let sid = (input && input.value) ? input.value.trim().toLowerCase() : "";
+        if (sid.indexOf("@") !== -1) sid = sid.split("@")[0];
+        if (!sid) {
+            alert("請輸入學生編號。");
+            return;
+        }
+        const ok = confirm("確定強制釋放學號「" + sid + "」？\n該生重新登入即可由溫習重新開始。");
+        if (!ok) return;
+        doForceRelease(sid);
+    }
+
+    function doForceRelease(sid) {
+        showLoading && showLoading("正在釋放...");
+        fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "forceRelease", sid: sid })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (typeof hideLoading === "function") hideLoading();
+            if (data.status === "success") {
+                alert(data.message || "已釋放。");
+                const input = document.getElementById("releaseSidInput");
+                if (input) input.value = "";
+                fetchQueue();
+            } else {
+                alert(data.message || "釋放失敗");
+            }
+        })
+        .catch(err => {
+            if (typeof hideLoading === "function") hideLoading();
+            alert("網路錯誤，無法釋放。");
         });
     }
 
