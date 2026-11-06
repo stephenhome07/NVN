@@ -210,7 +210,16 @@
                 <span style="color:#718096; font-size:12px;">快</span>
                 <span id="stSpeechRateLabel" style="color:#fbd38d; font-weight:bold; min-width:48px;">0.50</span>
             </div>
-            <p style="color:#718096; font-size:12px; margin:8px 0 0 0;">範圍 0.1～1.0，預設 0.5。調速後再按「播放讀音」。</p>
+            <div style="font-size:13px; color:#a0aec0; margin:14px 0 8px 0;">⏸ 字與字之間停頓（愈右愈長）</div>
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                <span style="color:#718096; font-size:12px;">密</span>
+                <input type="range" id="stSpeechGap" min="0" max="1200" step="50" value="350"
+                    oninput="onSpeechGapChange()"
+                    style="flex:1; min-width:140px; max-width:280px; cursor:pointer;">
+                <span style="color:#718096; font-size:12px;">疏</span>
+                <span id="stSpeechGapLabel" style="color:#fbd38d; font-weight:bold; min-width:64px;">350 ms</span>
+            </div>
+            <p style="color:#718096; font-size:12px; margin:8px 0 0 0;">會逐個英文詞播放，詞與詞之間可加停頓（0～1200 毫秒）。調好後再按「播放讀音」。</p>
         </div>
 
         <div id="stTestQuestions"></div>
@@ -265,6 +274,8 @@
     let studentTestOriginalLevel = null;
     let studentAnswersRevealed = false;
     let speechRate = 0.5; // 讀音速度（學生機可調）
+    let speechGapMs = 350; // 字詞之間停頓（毫秒）
+    let speechQueueTimer = null;
 
     function showLoading(text) {
         document.getElementById("loadingText").innerText = text || "載入中，請稍候...";
@@ -483,15 +494,71 @@
         if (lab) lab.innerText = speechRate.toFixed(2);
     }
 
-    function speakText(text) {
+    function onSpeechGapChange() {
+        const el = document.getElementById("stSpeechGap");
+        if (!el) return;
+        speechGapMs = parseInt(el.value, 10) || 0;
+        const lab = document.getElementById("stSpeechGapLabel");
+        if (lab) lab.innerText = speechGapMs + " ms";
+    }
+
+    function stopSpeech() {
         window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'en-US';
-        // 默書介面可調；其餘畫面用目前 speechRate（預設 0.5）
-        const el = document.getElementById("stSpeechRate");
-        if (el) speechRate = parseFloat(el.value) || speechRate;
-        utterance.rate = Math.max(0.1, Math.min(1.0, speechRate || 0.5));
-        window.speechSynthesis.speak(utterance);
+        if (speechQueueTimer) {
+            clearTimeout(speechQueueTimer);
+            speechQueueTimer = null;
+        }
+    }
+
+    /**
+     * 播放英文：有停頓設定時逐詞播放（詞與詞之間加間隔）
+     * gap=0 時整句一次播完
+     */
+    function speakText(text) {
+        stopSpeech();
+        const rateEl = document.getElementById("stSpeechRate");
+        const gapEl = document.getElementById("stSpeechGap");
+        if (rateEl) speechRate = parseFloat(rateEl.value) || speechRate;
+        if (gapEl) speechGapMs = parseInt(gapEl.value, 10) || 0;
+        const rate = Math.max(0.1, Math.min(1.0, speechRate || 0.5));
+        const gap = Math.max(0, Math.min(1200, speechGapMs || 0));
+
+        const raw = String(text || "").trim();
+        if (!raw) return;
+
+        // 無停頓：整句一次
+        if (gap <= 0) {
+            const u = new SpeechSynthesisUtterance(raw);
+            u.lang = "en-US";
+            u.rate = rate;
+            window.speechSynthesis.speak(u);
+            return;
+        }
+
+        // 有停頓：按空白／標點拆詞，逐個播
+        const words = raw.split(/\s+/).filter(Boolean);
+        let i = 0;
+        function speakNext() {
+            if (i >= words.length) return;
+            const word = words[i].replace(/^[^A-Za-z0-9']+|[^A-Za-z0-9']+$/g, "") || words[i];
+            const u = new SpeechSynthesisUtterance(word);
+            u.lang = "en-US";
+            u.rate = rate;
+            u.onend = function() {
+                i++;
+                if (i < words.length) {
+                    speechQueueTimer = setTimeout(speakNext, gap);
+                }
+            };
+            u.onerror = function() {
+                i++;
+                if (i < words.length) {
+                    speechQueueTimer = setTimeout(speakNext, gap);
+                }
+            };
+            window.speechSynthesis.speak(u);
+        }
+        speakNext();
     }
 
     function requestQueue() {
@@ -706,11 +773,16 @@
             btnReveal.style.background = "#e67e22";
             btnReveal.style.cursor = "pointer";
         }
-        // 重置語速滑桿顯示
+        // 重置語速／字距滑桿顯示
         const rateEl = document.getElementById("stSpeechRate");
         if (rateEl) {
             if (!rateEl.value) rateEl.value = "0.5";
             onSpeechRateChange();
+        }
+        const gapEl = document.getElementById("stSpeechGap");
+        if (gapEl) {
+            if (!gapEl.value) gapEl.value = "350";
+            onSpeechGapChange();
         }
 
         const container = document.getElementById("stTestQuestions");
