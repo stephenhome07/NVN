@@ -71,11 +71,7 @@
         <div id="timerRangeLabel" style="font-size: 13px; color: #a0aec0;">時段載入中...</div>
     </div>
 
-    <div class="config-bar">
-        <div class="config-item">📊 當前雲端參數：</div>
-        <div class="config-item">📖 溫習題數：<span id="cfgRevCount" style="color:#fbd38d; font-weight:bold;">-</span></div>
-        <div class="config-item">🎯 抽考題數：<span id="cfgTestCount" style="color:#fbd38d; font-weight:bold;">-</span></div>
-        <div class="config-item">🕐 時段：<span id="cfgSession" style="color:#fbd38d; font-weight:bold;">-</span></div>
+    <div style="margin-bottom:12px;">
         <button type="button" onclick="toggleSettingsPanel()" style="background:#4a5568; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:13px;">⚙️ 修改設定</button>
     </div>
 
@@ -156,15 +152,67 @@
         </div>
     </div>
 
-    <!-- 排隊區（測試中會隱藏） -->
+    <!-- 排隊區：左排隊中／右測試中（大電視一列並排） -->
     <div id="queueArea">
         <div class="refresh-bar">
-            <h3 style="margin:0;">🔴 講台前排隊名單 (<span id="queueCount">0</span> 人正在等候)</h3>
+            <h3 style="margin:0;">📋 講台名單　等候 <span id="queueCountWaiting" style="color:#f6e05e;">0</span>　｜　默書中 <span id="queueCountTesting" style="color:#fbd38d;">0</span></h3>
             <button class="btn-big-refresh" id="btnRefresh" onclick="manualRefresh()">🔄 立即更新名單</button>
         </div>
-        <p style="color:#a0aec0; font-size:13px; margin:-5px 0 15px 0;">系統約每 60 秒自動更新一次。建議在叫名前手動按「立即更新名單」。</p>
-        
-        <!-- Export 當日紀錄 -->
+        <p style="color:#a0aec0; font-size:13px; margin:-5px 0 15px 0;">左：排隊等候｜右：默書中（可強制 PASS 補出席）。約每 60 秒自動更新。</p>
+
+        <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:stretch;">
+            <!-- 左：排隊中 -->
+            <div style="flex:1 1 320px; min-width:280px; background:#1a202c; border:1px solid #3182ce; border-radius:10px; padding:12px; box-sizing:border-box;">
+                <div style="font-size:18px; font-weight:bold; color:#63b3ed; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #2d3748;">
+                    ⏳ 排隊中（等候默書）
+                </div>
+                <table class="queue-table" style="font-size:14px;">
+                    <thead>
+                        <tr>
+                            <th>班別</th>
+                            <th>姓名</th>
+                            <th>已試</th>
+                            <th>級別</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="queueTableWaiting">
+                        <tr><td colspan="5" class="empty-msg">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- 右：測試中 -->
+            <div style="flex:1 1 320px; min-width:280px; background:#1a202c; border:1px solid #dd6b20; border-radius:10px; padding:12px; box-sizing:border-box;">
+                <div style="font-size:18px; font-weight:bold; color:#fbd38d; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #2d3748;">
+                    📝 默書中（測試中）
+                </div>
+                <table class="queue-table" style="font-size:14px;">
+                    <thead>
+                        <tr>
+                            <th>班別</th>
+                            <th>姓名</th>
+                            <th>已試</th>
+                            <th>級別</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="queueTableTesting">
+                        <tr><td colspan="5" class="empty-msg">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 頁底：參數／匯出／強制釋放 -->
+    <div id="teacherFooterTools" style="margin-top:28px; padding-top:18px; border-top:1px solid #4a5568;">
+        <div class="config-bar" style="margin-bottom:14px;">
+            <div class="config-item">📊 當前雲端參數：</div>
+            <div class="config-item">📖 溫習題數：<span id="cfgRevCount" style="color:#fbd38d; font-weight:bold;">-</span></div>
+            <div class="config-item">🎯 抽考題數：<span id="cfgTestCount" style="color:#fbd38d; font-weight:bold;">-</span></div>
+            <div class="config-item">🕐 時段：<span id="cfgSession" style="color:#fbd38d; font-weight:bold;">-</span></div>
+        </div>
+
         <div style="background:#232d3f; padding:15px 18px; border-radius:8px; margin-bottom:14px; display:flex; flex-wrap:wrap; align-items:center; gap:12px; border:1px solid #4a5568;">
             <span style="font-weight:bold; color:#63b3ed;">📥 匯出當日紀錄：</span>
             <input type="date" id="exportDate" style="padding:10px 12px; font-size:15px; border-radius:6px; background:#1a202c; color:white; border:1px solid #4a5568;">
@@ -172,29 +220,16 @@
             <span style="color:#a0aec0; font-size:13px;">欄位：Class, ClassNumber, Name, SID, Record, Attempts, LeaveTime（PASS 准予離開時間）</span>
         </div>
 
-        <!-- 強制釋放（學生卡在排隊／測試畫面） -->
-        <div style="background:#3b1f1f; padding:15px 18px; border-radius:8px; margin-bottom:20px; display:flex; flex-wrap:wrap; align-items:center; gap:12px; border:1px solid #c53030;">
-            <span style="font-weight:bold; color:#fc8181;">🔓 強制釋放學生：</span>
-            <input type="text" id="releaseSidInput" placeholder="輸入學號 例如 s19051234" style="padding:10px 12px; font-size:15px; border-radius:6px; background:#1a202c; color:white; border:1px solid #4a5568; min-width:200px;">
-            <button type="button" class="btn" style="background:#e53e3e; color:white; padding:10px 18px; font-size:15px; width:auto;" onclick="forceReleaseBySid()">一鍵釋放</button>
-            <span style="color:#a0aec0; font-size:13px;">用於：一登入就跳去排隊畫面、卡死無法重溫。釋放後學生重新登入即可。</span>
+        <div style="background:#3b1f1f; padding:15px 18px; border-radius:8px; margin-bottom:12px; border:1px solid #c53030;">
+            <div style="font-weight:bold; color:#fc8181; margin-bottom:10px;">🔓 強制釋放學生（卡關／一登入就跳排隊畫面）</div>
+            <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px;">
+                <select id="releaseStudentSelect" style="padding:10px 12px; font-size:15px; border-radius:6px; background:#1a202c; color:white; border:1px solid #4a5568; min-width:280px; max-width:100%;">
+                    <option value="">— 選擇學生（班別／學號／姓名）—</option>
+                </select>
+                <button type="button" class="btn" style="background:#e53e3e; color:white; padding:10px 18px; font-size:15px; width:auto;" onclick="forceReleaseFromDropdown()">一鍵釋放</button>
+            </div>
+            <p style="color:#a0aec0; font-size:13px; margin:10px 0 0 0;">釋放後學生重新登入即可由溫習重新開始。名單來自上方「排隊中／測試中」。</p>
         </div>
-        
-        <table class="queue-table">
-            <thead>
-                <tr>
-                    <th width="10%">狀態</th>
-                    <th width="14%">班別 (學號)</th>
-                    <th width="16%">學生姓名</th>
-                    <th width="12%">今日已試</th>
-                    <th width="14%">秘密級別</th>
-                    <th width="34%">操作</th>
-                </tr>
-            </thead>
-            <tbody id="queueTableBody">
-                <tr><td colspan="6" class="empty-msg">正在連線至雲端獲取名單...</td></tr>
-            </tbody>
-        </table>
     </div>
 </div>
 
@@ -418,48 +453,132 @@
     }
 
     function renderQueueTable() {
-        const tbody = document.getElementById("queueTableBody");
-        document.getElementById("queueCount").innerText = currentQueue.length;
-        
-        if(currentQueue.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="empty-msg">☕ 目前該課室沒有學生在排隊／測試中。</td></tr>';
+        const waiting = [];
+        const testing = [];
+        (currentQueue || []).forEach(function(s) {
+            if ((s.queueStatus || "排隊中") === "測試中") testing.push(s);
+            else waiting.push(s);
+        });
+
+        const elW = document.getElementById("queueCountWaiting");
+        const elT = document.getElementById("queueCountTesting");
+        if (elW) elW.innerText = waiting.length;
+        if (elT) elT.innerText = testing.length;
+
+        renderOneQueueTable("queueTableWaiting", waiting, "waiting");
+        renderOneQueueTable("queueTableTesting", testing, "testing");
+        refreshReleaseDropdown();
+    }
+
+    function renderOneQueueTable(tbodyId, list, mode) {
+        const tbody = document.getElementById(tbodyId);
+        if (!tbody) return;
+        if (!list.length) {
+            const msg = mode === "testing" ? "☕ 目前沒有學生在默書中。" : "☕ 目前沒有學生在排隊。";
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">' + msg + '</td></tr>';
             return;
         }
-
         tbody.innerHTML = "";
-        currentQueue.forEach(student => {
+        list.forEach(function(student) {
             const tr = document.createElement("tr");
             const attempts = (student.attempts != null) ? student.attempts : 0;
-            const qSt = student.queueStatus || "排隊中";
-            const isTesting = (qSt === "測試中");
-            const statusBadge = isTesting
-                ? '<span style="background:#dd6b20; color:white; padding:4px 10px; border-radius:4px; font-weight:bold; font-size:12px;">測試中</span>'
-                : '<span class="badge-live">等待中</span>';
-            const startBtn = isTesting
-                ? '<span style="color:#a0aec0; font-size:12px;">（已開始）</span>'
-                : '<button type="button" data-action="start" style="background:#3182ce; color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; cursor:pointer;">🎯 開始測試</button>';
-
-            tr.innerHTML = `
-                <td>${statusBadge}</td>
-                <td><strong>${student.className}班</strong> (${student.classNumber}號)<br><span style="color:#fc8181; font-size:12px;">📍 ${student.room}</span><br><span style="color:#718096; font-size:11px;">${student.sid || ""}</span></td>
-                <td><span style="font-size:18px; font-weight:bold; color:#63b3ed;">${student.name}</span></td>
-                <td><span style="background:#553c9a; color:white; padding:4px 10px; border-radius:4px; font-weight:bold;">${attempts} 次</span></td>
-                <td><span class="badge-lv">${student.level}</span></td>
-                <td style="white-space:nowrap;">
-                    ${startBtn}
-                    <button type="button" data-action="release" style="background:#e53e3e; color:white; border:none; padding:6px 10px; border-radius:4px; font-weight:bold; cursor:pointer; margin-left:6px;">🔓 釋放</button>
-                </td>
-            `;
-            tr.querySelectorAll("button").forEach(btn => {
+            let actionHtml = "";
+            if (mode === "testing") {
+                actionHtml =
+                    '<button type="button" data-action="forcePass" style="background:#38a169; color:white; border:none; padding:6px 10px; border-radius:4px; font-weight:bold; cursor:pointer; margin-bottom:4px;">✅ 強制 PASS</button> ' +
+                    '<button type="button" data-action="release" style="background:#e53e3e; color:white; border:none; padding:6px 8px; border-radius:4px; font-weight:bold; cursor:pointer;">🔓</button>';
+            } else {
+                actionHtml =
+                    '<button type="button" data-action="start" style="background:#3182ce; color:white; border:none; padding:6px 10px; border-radius:4px; font-weight:bold; cursor:pointer; margin-bottom:4px;">🎯 開始</button> ' +
+                    '<button type="button" data-action="release" style="background:#e53e3e; color:white; border:none; padding:6px 8px; border-radius:4px; font-weight:bold; cursor:pointer;">🔓</button>';
+            }
+            tr.innerHTML =
+                '<td><strong>' + (student.className || "") + '</strong><br><span style="color:#a0aec0; font-size:12px;">' + (student.classNumber || "") + '號</span></td>' +
+                '<td><span style="font-size:16px; font-weight:bold; color:#63b3ed;">' + (student.name || "") + '</span><br><span style="color:#718096; font-size:11px;">' + (student.sid || "") + '</span></td>' +
+                '<td><span style="background:#553c9a; color:white; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:12px;">' + attempts + '</span></td>' +
+                '<td><span class="badge-lv">' + (student.level || "") + '</span></td>' +
+                '<td style="white-space:nowrap;">' + actionHtml + '</td>';
+            tr.querySelectorAll("button").forEach(function(btn) {
                 btn.addEventListener("click", function(e) {
                     e.stopPropagation();
                     const act = btn.getAttribute("data-action");
                     if (act === "start") selectStudentForTest(student);
                     if (act === "release") forceReleaseStudent(student);
+                    if (act === "forcePass") forcePassStudent(student);
                 });
             });
             tbody.appendChild(tr);
         });
+    }
+
+    function refreshReleaseDropdown() {
+        const sel = document.getElementById("releaseStudentSelect");
+        if (!sel) return;
+        const prev = sel.value;
+        sel.innerHTML = '<option value="">— 選擇學生（班別／學號／姓名）—</option>';
+        // 按班別、學號排序
+        const list = (currentQueue || []).slice().sort(function(a, b) {
+            const ca = String(a.className || "") + String(a.classNumber || "");
+            const cb = String(b.className || "") + String(b.classNumber || "");
+            return ca.localeCompare(cb, "zh-Hant");
+        });
+        list.forEach(function(s) {
+            const opt = document.createElement("option");
+            opt.value = s.sid;
+            const st = s.queueStatus || "排隊中";
+            opt.textContent = (s.className || "") + " " + (s.classNumber || "") + "號｜" + (s.name || "") + "｜" + st + "｜" + (s.sid || "");
+            sel.appendChild(opt);
+        });
+        if (prev) sel.value = prev;
+    }
+
+    function forceReleaseFromDropdown() {
+        const sel = document.getElementById("releaseStudentSelect");
+        const sid = sel ? sel.value : "";
+        if (!sid) {
+            alert("請先從清單選擇學生。");
+            return;
+        }
+        const student = (currentQueue || []).find(function(s) { return String(s.sid).toLowerCase() === String(sid).toLowerCase(); });
+        if (student) {
+            forceReleaseStudent(student);
+        } else {
+            const ok = confirm("確定強制釋放學號「" + sid + "」？");
+            if (!ok) return;
+            doForceRelease(sid);
+        }
+    }
+
+    /** 老師忘記按 PASS：補寫合格 + LeaveTime（出席） */
+    function forcePassStudent(student) {
+        if (!student || !student.sid) return;
+        const ok = confirm(
+            "【強制 PASS】\n\n" +
+            "學生：" + student.name + "（" + student.sid + "）\n" +
+            "狀態：" + (student.queueStatus || "") + "\n\n" +
+            "會寫入合格紀錄與離開時間（CSV 會有出席）。\n確定？"
+        );
+        if (!ok) return;
+        fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify({
+                action: "submitResult",
+                sid: student.sid,
+                resultStatus: "Pass",
+                targetLevel: student.level,
+                forceClearBatch: false
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === "success") {
+                alert("已為 " + student.name + " 強制 PASS，可匯出 CSV 作出席。");
+                fetchQueue();
+            } else {
+                alert(data.message || "操作失敗");
+            }
+        })
+        .catch(err => alert("網路錯誤"));
     }
 
     function forceReleaseStudent(student) {
@@ -498,8 +617,8 @@
             if (typeof hideLoading === "function") hideLoading();
             if (data.status === "success") {
                 alert(data.message || "已釋放。");
-                const input = document.getElementById("releaseSidInput");
-                if (input) input.value = "";
+                const sel = document.getElementById("releaseStudentSelect");
+                if (sel) sel.value = "";
                 fetchQueue();
             } else {
                 alert(data.message || "釋放失敗");
@@ -637,7 +756,7 @@
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'en-US';
-        utterance.rate = 0.5; // 減慢至約 50%
+        utterance.rate = 0.5;
         window.speechSynthesis.speak(utterance);
     }
 
