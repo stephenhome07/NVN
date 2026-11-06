@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V2.02 NVN 句子溫習系統 (學生端)</title>
+    <title>V1.07 NVN 句子溫習系統 (學生端)</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; background-color: #f4f6f7; color: #333; }
         .container { max-width: 650px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin: 0 auto; position: relative; }
@@ -188,7 +188,7 @@
         <h2 style="border:none; color:#63b3ed; margin:0 0 8px 0;">📝 默書測試（老師操作）</h2>
         <p id="stStudentBar" style="font-size:16px; color:#a0aec0; margin:0 0 16px 0;"></p>
 
-        <div style="background:#2d3748; padding:12px 14px; border-radius:8px; margin-bottom:16px;">
+        <div style="background:#2d3748; padding:12px 14px; border-radius:8px; margin-bottom:12px;">
             <div style="font-size:13px; color:#a0aec0; margin-bottom:6px;">級別（手動調整需確認）</div>
             <select id="stActionLevel" onchange="onStudentLevelChange()" style="padding:10px; font-size:15px; border-radius:6px; background:#1a202c; color:white; border:1px solid #4a5568; width:100%; max-width:360px;">
                 <option value="LV1">LV1: 香港小一至小三</option>
@@ -198,6 +198,19 @@
                 <option value="LV5">LV5: 香港中五至中六</option>
                 <option value="LV6">LV6: 大學用 / 高階</option>
             </select>
+        </div>
+
+        <div style="background:#2d3748; padding:12px 14px; border-radius:8px; margin-bottom:16px;">
+            <div style="font-size:13px; color:#a0aec0; margin-bottom:8px;">🔊 讀音速度（愈左愈慢）</div>
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                <span style="color:#718096; font-size:12px;">慢</span>
+                <input type="range" id="stSpeechRate" min="0.1" max="1.0" step="0.05" value="0.5"
+                    oninput="onSpeechRateChange()"
+                    style="flex:1; min-width:140px; max-width:280px; cursor:pointer;">
+                <span style="color:#718096; font-size:12px;">快</span>
+                <span id="stSpeechRateLabel" style="color:#fbd38d; font-weight:bold; min-width:48px;">0.50</span>
+            </div>
+            <p style="color:#718096; font-size:12px; margin:8px 0 0 0;">範圍 0.1～1.0，預設 0.5。調速後再按「播放讀音」。</p>
         </div>
 
         <div id="stTestQuestions"></div>
@@ -251,6 +264,7 @@
     let studentTestSession = null; // { level, testQuestions, ... } 老師開咗測試後
     let studentTestOriginalLevel = null;
     let studentAnswersRevealed = false;
+    let speechRate = 0.5; // 讀音速度（學生機可調）
 
     function showLoading(text) {
         document.getElementById("loadingText").innerText = text || "載入中，請稍候...";
@@ -461,11 +475,22 @@
         });
     }
 
+    function onSpeechRateChange() {
+        const el = document.getElementById("stSpeechRate");
+        if (!el) return;
+        speechRate = parseFloat(el.value) || 0.5;
+        const lab = document.getElementById("stSpeechRateLabel");
+        if (lab) lab.innerText = speechRate.toFixed(2);
+    }
+
     function speakText(text) {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'en-US';
-        utterance.rate = 0.5; // 減慢至約 50%
+        // 默書介面可調；其餘畫面用目前 speechRate（預設 0.5）
+        const el = document.getElementById("stSpeechRate");
+        if (el) speechRate = parseFloat(el.value) || speechRate;
+        utterance.rate = Math.max(0.1, Math.min(1.0, speechRate || 0.5));
         window.speechSynthesis.speak(utterance);
     }
 
@@ -680,6 +705,12 @@
             btnReveal.innerText = "👁️ 顯示英文答案核對";
             btnReveal.style.background = "#e67e22";
             btnReveal.style.cursor = "pointer";
+        }
+        // 重置語速滑桿顯示
+        const rateEl = document.getElementById("stSpeechRate");
+        if (rateEl) {
+            if (!rateEl.value) rateEl.value = "0.5";
+            onSpeechRateChange();
         }
 
         const container = document.getElementById("stTestQuestions");
