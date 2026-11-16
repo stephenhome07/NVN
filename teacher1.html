@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NVN 總司令講台控制面板 (教師端) V1.11</title>
+    <title>NVN 總司令講台控制面板 (教師端) V1.12</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background-color: #1a202c; color: #edf2f7; }
         .container { max-width: 1000px; margin: 0 auto; }
@@ -221,14 +221,15 @@
         </div>
 
         <div style="background:#3b1f1f; padding:15px 18px; border-radius:8px; margin-bottom:12px; border:1px solid #c53030;">
-            <div style="font-weight:bold; color:#fc8181; margin-bottom:10px;">🔓 強制釋放學生（卡關／一登入就跳排隊畫面）</div>
+            <div style="font-weight:bold; color:#fc8181; margin-bottom:10px;">🔓 強制釋放／刪除卡關（直接刪 Queue 列）</div>
             <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px;">
                 <select id="releaseStudentSelect" style="padding:10px 12px; font-size:15px; border-radius:6px; background:#1a202c; color:white; border:1px solid #4a5568; min-width:280px; max-width:100%;">
                     <option value="">— 選擇學生（班別／學號／姓名）—</option>
                 </select>
-                <button type="button" class="btn" style="background:#e53e3e; color:white; padding:10px 18px; font-size:15px; width:auto;" onclick="forceReleaseFromDropdown()">一鍵釋放</button>
+                <button type="button" class="btn" style="background:#e53e3e; color:white; padding:10px 18px; font-size:15px; width:auto;" onclick="forceReleaseFromDropdown()">刪除該生卡關</button>
+                <button type="button" class="btn" style="background:#9b2c2c; color:white; padding:10px 18px; font-size:15px; width:auto;" onclick="forceReleaseAllOld()">清除全部舊日卡關</button>
             </div>
-            <p style="color:#a0aec0; font-size:13px; margin:10px 0 0 0;">釋放後學生重新登入即可由溫習重新開始。名單來自上方「排隊中／測試中」。</p>
+            <p style="color:#a0aec0; font-size:13px; margin:10px 0 0 0;">會直接刪 Google Sheet「Queue」列。若按了 Sheet 冇變，多數係 <strong style="color:#fc8181;">GAS 未重新部署「新版本」</strong>。成功後請開 Sheet 核對。</p>
         </div>
     </div>
 </div>
@@ -625,19 +626,39 @@
                 alert(data.message || "已刪除卡關紀錄。");
                 const sel = document.getElementById("releaseStudentSelect");
                 if (sel) sel.value = "";
-                // 即時從畫面移除，再向伺服器刷新
-                currentQueue = (currentQueue || []).filter(function(s) {
-                    return String(s.sid).toLowerCase() !== String(sid).toLowerCase();
-                });
-                renderQueueTable();
+                // 等伺服器為準：先刷新，唔做畫面假刪
                 fetchQueue();
             } else {
-                alert("釋放失敗：\n" + (data.message || "未知錯誤") + "\n\n若仍顯示「未知的指令」，請重新部署最新 GAS。");
+                alert("釋放失敗：\n" + (data.message || "未知錯誤") + "\n\n若顯示「未知的指令」→ 必須在 Apps Script 重新「部署 → 新版本」。");
             }
         })
         .catch(function(err) {
             if (typeof hideLoading === "function") hideLoading();
-            alert("網路錯誤或伺服器無回應，無法釋放。\n請確認已重新部署 GAS，並按「立即更新名單」再試。");
+            alert("網路錯誤或伺服器無回應。\n\n請檢查：\n1. GAS 已部署「新版本」\n2. 網址是否正確\n3. 再按「立即更新名單」");
+        });
+    }
+
+    function forceReleaseAllOld() {
+        const ok = confirm(
+            "【清除全部舊日卡關】\n\n" +
+            "會刪除 Queue 中所有「非今日」且狀態為排隊中／測試中的列。\n" +
+            "今日仍在排隊／默書的學生不會被刪。\n\n確定？"
+        );
+        if (!ok) return;
+        if (typeof showLoading === "function") showLoading("正在清除舊日卡關...");
+        fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "forceReleaseAllOld" })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (typeof hideLoading === "function") hideLoading();
+            alert(data.message || (data.status === "success" ? "完成" : "失敗"));
+            fetchQueue();
+        })
+        .catch(function(err) {
+            if (typeof hideLoading === "function") hideLoading();
+            alert("網路錯誤。若顯示「未知的指令」，請重新部署 GAS 新版本。");
         });
     }
 
