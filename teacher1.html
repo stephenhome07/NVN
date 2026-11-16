@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NVN 總司令講台控制面板 (教師端) V1.07</title>
+    <title>NVN 總司令講台控制面板 (教師端) V1.10</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background-color: #1a202c; color: #edf2f7; }
         .container { max-width: 1000px; margin: 0 auto; }
@@ -492,8 +492,11 @@
                     '<button type="button" data-action="start" style="background:#3182ce; color:white; border:none; padding:6px 10px; border-radius:4px; font-weight:bold; cursor:pointer; margin-bottom:4px;">🎯 開始</button> ' +
                     '<button type="button" data-action="release" style="background:#e53e3e; color:white; border:none; padding:6px 8px; border-radius:4px; font-weight:bold; cursor:pointer;">🔓</button>';
             }
+            const oldTag = (student.isToday === false)
+                ? '<br><span style="background:#c53030; color:white; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold;">舊日 ' + (student.dateStr || "") + '</span>'
+                : '';
             tr.innerHTML =
-                '<td><strong>' + (student.className || "") + '</strong><br><span style="color:#a0aec0; font-size:12px;">' + (student.classNumber || "") + '號</span></td>' +
+                '<td><strong>' + (student.className || "") + '</strong><br><span style="color:#a0aec0; font-size:12px;">' + (student.classNumber || "") + '號</span>' + oldTag + '</td>' +
                 '<td><span style="font-size:16px; font-weight:bold; color:#63b3ed;">' + (student.name || "") + '</span><br><span style="color:#718096; font-size:11px;">' + (student.sid || "") + '</span></td>' +
                 '<td><span style="background:#553c9a; color:white; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:12px;">' + attempts + '</span></td>' +
                 '<td><span class="badge-lv">' + (student.level || "") + '</span></td>' +
@@ -526,7 +529,8 @@
             const opt = document.createElement("option");
             opt.value = s.sid;
             const st = s.queueStatus || "排隊中";
-            opt.textContent = (s.className || "") + " " + (s.classNumber || "") + "號｜" + (s.name || "") + "｜" + st + "｜" + (s.sid || "");
+            const dayTag = (s.isToday === false) ? ("｜舊日 " + (s.dateStr || "")) : "";
+            opt.textContent = (s.className || "") + " " + (s.classNumber || "") + "號｜" + (s.name || "") + "｜" + st + dayTag + "｜" + (s.sid || "");
             sel.appendChild(opt);
         });
         if (prev) sel.value = prev;
