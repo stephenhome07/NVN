@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NVN 總司令講台控制面板 (教師端) V1.10</title>
+    <title>NVN 總司令講台控制面板 (教師端) V1.11</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background-color: #1a202c; color: #edf2f7; }
         .container { max-width: 1000px; margin: 0 auto; }
@@ -587,11 +587,13 @@
 
     function forceReleaseStudent(student) {
         if (!student || !student.sid) return;
+        const dayNote = (student.isToday === false) ? ("\n日期：舊日 " + (student.dateStr || "") + "（會一併刪除所有卡關列）") : "";
         const ok = confirm(
-            "【強制釋放】\n\n" +
+            "【強制釋放／刪除卡關】\n\n" +
             "學生：" + student.name + "（" + student.sid + "）\n" +
-            "狀態：" + (student.queueStatus || "排隊中") + "\n\n" +
-            "釋放後，該生重新登入會回到溫習畫面，可重新抄寫／排隊。\n確定釋放？"
+            "狀態：" + (student.queueStatus || "排隊中") + dayNote + "\n\n" +
+            "會從 Queue 直接刪除該生所有「排隊中／測試中」紀錄（含舊日）。\n" +
+            "之後重新登入可回到溫習畫面。\n確定刪除？"
         );
         if (!ok) return;
         doForceRelease(student.sid);
@@ -611,26 +613,31 @@
     }
 
     function doForceRelease(sid) {
-        showLoading && showLoading("正在釋放...");
+        if (typeof showLoading === "function") showLoading("正在刪除卡關紀錄...");
         fetch(GAS_URL, {
             method: "POST",
             body: JSON.stringify({ action: "forceRelease", sid: sid })
         })
-        .then(r => r.json())
-        .then(data => {
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
             if (typeof hideLoading === "function") hideLoading();
             if (data.status === "success") {
-                alert(data.message || "已釋放。");
+                alert(data.message || "已刪除卡關紀錄。");
                 const sel = document.getElementById("releaseStudentSelect");
                 if (sel) sel.value = "";
+                // 即時從畫面移除，再向伺服器刷新
+                currentQueue = (currentQueue || []).filter(function(s) {
+                    return String(s.sid).toLowerCase() !== String(sid).toLowerCase();
+                });
+                renderQueueTable();
                 fetchQueue();
             } else {
-                alert(data.message || "釋放失敗");
+                alert("釋放失敗：\n" + (data.message || "未知錯誤") + "\n\n若仍顯示「未知的指令」，請重新部署最新 GAS。");
             }
         })
-        .catch(err => {
+        .catch(function(err) {
             if (typeof hideLoading === "function") hideLoading();
-            alert("網路錯誤，無法釋放。");
+            alert("網路錯誤或伺服器無回應，無法釋放。\n請確認已重新部署 GAS，並按「立即更新名單」再試。");
         });
     }
 
