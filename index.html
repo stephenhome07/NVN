@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="google" content="notranslate">
-    <title>V1.08 NVN 句子溫習系統 (學生端)</title>
+    <title>V1.09 NVN 句子溫習系統 (學生端)</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; background-color: #f4f6f7; color: #333; }
         .container { max-width: 650px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin: 0 auto; position: relative; }
@@ -133,6 +133,20 @@
     </button>
 </div>
 
+<!-- 老師密碼彈窗：必須在 body 最外層，否則 queueSection 隱藏時 PASS 無法彈出 -->
+<div id="teacherPwModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:10001; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:12px; padding:24px 20px; width:90%; max-width:360px; box-shadow:0 8px 30px rgba(0,0,0,0.25); text-align:left;">
+        <h3 style="margin:0 0 8px 0; color:#2d3748; font-size:18px;">🔐 老師專用</h3>
+        <p style="margin:0 0 14px 0; color:#718096; font-size:14px;">請輸入密碼以開始默書（輸入時會隱藏）</p>
+        <input type="password" id="teacherPwInput" autocomplete="off" inputmode="numeric" placeholder="輸入密碼"
+            style="width:100%; box-sizing:border-box; padding:12px 14px; font-size:18px; border:2px solid #cbd5e0; border-radius:8px; letter-spacing:3px;">
+        <div style="display:flex; gap:10px; margin-top:16px;">
+            <button type="button" onclick="closeTeacherPasswordModal()" style="flex:1; padding:12px; border:none; border-radius:8px; background:#e2e8f0; color:#2d3748; font-weight:bold; cursor:pointer;">取消</button>
+            <button type="button" onclick="confirmTeacherPassword()" style="flex:1; padding:12px; border:none; border-radius:8px; background:#9b59b6; color:white; font-weight:bold; cursor:pointer;">確認</button>
+        </div>
+    </div>
+</div>
+
 <div class="container">
     <h2>🎯 NVN 句子溫習系統</h2>
 
@@ -205,20 +219,6 @@
             </button>
         </div>
 
-        <!-- 老師密碼（type=password，顯示為圓點／星號） -->
-        <div id="teacherPwModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center;">
-            <div style="background:white; border-radius:12px; padding:24px 20px; width:90%; max-width:360px; box-shadow:0 8px 30px rgba(0,0,0,0.25); text-align:left;">
-                <h3 style="margin:0 0 8px 0; color:#2d3748; font-size:18px;">🔐 老師專用</h3>
-                <p style="margin:0 0 14px 0; color:#718096; font-size:14px;">請輸入密碼以開始默書（輸入時會隱藏）</p>
-                <input type="password" id="teacherPwInput" autocomplete="off" inputmode="numeric" placeholder="輸入密碼"
-                    style="width:100%; box-sizing:border-box; padding:12px 14px; font-size:18px; border:2px solid #cbd5e0; border-radius:8px; letter-spacing:3px;">
-                <div style="display:flex; gap:10px; margin-top:16px;">
-                    <button type="button" onclick="closeTeacherPasswordModal()" style="flex:1; padding:12px; border:none; border-radius:8px; background:#e2e8f0; color:#2d3748; font-weight:bold; cursor:pointer;">取消</button>
-                    <button type="button" onclick="confirmTeacherPassword()" style="flex:1; padding:12px; border:none; border-radius:8px; background:#9b59b6; color:white; font-weight:bold; cursor:pointer;">確認</button>
-                </div>
-            </div>
-        </div>
-        
         <button class="btn-manual-refresh" id="btnManualRefresh" onclick="manualCheckStatus()">🔄 立即更新狀態</button>
         <p style="color: #7f8c8d; font-size: 13px; margin-top:8px;">請勿關閉網頁。若老師已在他機批改，可按上方更新狀態。</p>
     </div>
@@ -818,8 +818,12 @@
         pendingTeacherAction = action || "start";
         const modal = document.getElementById("teacherPwModal");
         const input = document.getElementById("teacherPwInput");
-        const title = modal ? modal.querySelector("h3") : null;
-        const hint = modal ? modal.querySelector("p") : null;
+        if (!modal || !input) {
+            alert("找不到密碼視窗，請重新整理網頁。");
+            return;
+        }
+        const title = modal.querySelector("h3");
+        const hint = modal.querySelector("p");
         if (title) title.innerText = pendingTeacherAction === "pass" ? "🔐 老師確認 PASS" : "🔐 老師專用";
         if (hint) {
             hint.innerText = pendingTeacherAction === "pass"
@@ -828,7 +832,9 @@
         }
         modal.style.display = "flex";
         input.value = "";
-        setTimeout(function() { input.focus(); }, 50);
+        setTimeout(function() {
+            try { input.focus(); } catch (e) {}
+        }, 50);
     }
 
     function closeTeacherPasswordModal() {
