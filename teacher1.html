@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NVN 總司令講台控制面板 (教師端) V1.13</title>
+    <title>NVN 總司令講台控制面板 (教師端) V1.14</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background-color: #1a202c; color: #edf2f7; }
         .container { max-width: 1000px; margin: 0 auto; }
@@ -509,12 +509,14 @@
             let actionHtml = "";
             if (mode === "testing") {
                 actionHtml =
-                    '<button type="button" data-action="forcePass" style="background:#38a169; color:white; border:none; padding:6px 10px; border-radius:4px; font-weight:bold; cursor:pointer; margin-bottom:4px;">✅ 強制 PASS</button> ' +
-                    '<button type="button" data-action="release" style="background:#e53e3e; color:white; border:none; padding:6px 8px; border-radius:4px; font-weight:bold; cursor:pointer;">🔓</button>';
+                    '<button type="button" data-action="forcePass" style="background:#38a169; color:white; border:none; padding:5px 8px; border-radius:4px; font-weight:bold; cursor:pointer; margin:2px;">✅ PASS</button>' +
+                    '<button type="button" data-action="forceFail" style="background:#c05621; color:white; border:none; padding:5px 8px; border-radius:4px; font-weight:bold; cursor:pointer; margin:2px;">❌ FAIL</button>' +
+                    '<button type="button" data-action="release" style="background:#718096; color:white; border:none; padding:5px 8px; border-radius:4px; font-weight:bold; cursor:pointer; margin:2px;" title="只刪紀錄、唔計成績">🔓</button>';
             } else {
                 actionHtml =
-                    '<button type="button" data-action="start" style="background:#3182ce; color:white; border:none; padding:6px 10px; border-radius:4px; font-weight:bold; cursor:pointer; margin-bottom:4px;">🎯 開始</button> ' +
-                    '<button type="button" data-action="release" style="background:#e53e3e; color:white; border:none; padding:6px 8px; border-radius:4px; font-weight:bold; cursor:pointer;">🔓</button>';
+                    '<button type="button" data-action="start" style="background:#3182ce; color:white; border:none; padding:5px 8px; border-radius:4px; font-weight:bold; cursor:pointer; margin:2px;">🎯 開始</button>' +
+                    '<button type="button" data-action="forceFail" style="background:#c05621; color:white; border:none; padding:5px 8px; border-radius:4px; font-weight:bold; cursor:pointer; margin:2px;" title="未完成就離開，記不合格">❌ FAIL</button>' +
+                    '<button type="button" data-action="release" style="background:#718096; color:white; border:none; padding:5px 8px; border-radius:4px; font-weight:bold; cursor:pointer; margin:2px;" title="只刪紀錄、唔計成績">🔓</button>';
             }
             const oldTag = (student.isToday === false)
                 ? '<br><span style="background:#c53030; color:white; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold;">舊日 ' + (student.dateStr || "") + '</span>'
@@ -537,6 +539,7 @@
                     if (act === "start") selectStudentForTest(student);
                     if (act === "release") forceReleaseStudent(student);
                     if (act === "forcePass") forcePassStudent(student);
+                    if (act === "forceFail") forceFailStudent(student);
                 });
             });
             tbody.appendChild(tr);
@@ -592,12 +595,31 @@
             "會寫入合格紀錄與離開時間（CSV 會有出席）。\n確定？"
         );
         if (!ok) return;
+        submitTeacherResult(student, "Pass");
+    }
+
+    /** 未完成就離開／超時：記不合格（寫入 Logs，CSV 有 Fail） */
+    function forceFailStudent(student) {
+        if (!student || !student.sid) return;
+        const ok = confirm(
+            "【強制 FAIL 不合格】\n\n" +
+            "學生：" + student.name + "（" + student.sid + "）\n" +
+            "狀態：" + (student.queueStatus || "") + "\n\n" +
+            "適用：排隊後自己走、未完成默書就離開。\n" +
+            "會寫入不合格紀錄（CSV Record = Fail），並移出名單。\n" +
+            "級別維持不變。\n確定？"
+        );
+        if (!ok) return;
+        submitTeacherResult(student, "Fail");
+    }
+
+    function submitTeacherResult(student, resultStatus) {
         fetch(GAS_URL, {
             method: "POST",
             body: JSON.stringify({
                 action: "submitResult",
                 sid: student.sid,
-                resultStatus: "Pass",
+                resultStatus: resultStatus,
                 targetLevel: student.level,
                 forceClearBatch: false
             })
@@ -605,7 +627,8 @@
         .then(r => r.json())
         .then(data => {
             if (data.status === "success") {
-                alert("已為 " + student.name + " 強制 PASS，可匯出 CSV 作出席。");
+                const label = resultStatus === "Pass" ? "PASS 合格" : "FAIL 不合格";
+                alert("已為 " + student.name + " 記「" + label + "」。");
                 fetchQueue();
             } else {
                 alert(data.message || "操作失敗");
