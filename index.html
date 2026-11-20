@@ -1,12 +1,47 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-Hant" translate="no" class="notranslate">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V1.07 NVN 句子溫習系統 (學生端)</title>
+    <meta name="google" content="notranslate">
+    <title>V1.08 NVN 句子溫習系統 (學生端)</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; background-color: #f4f6f7; color: #333; }
         .container { max-width: 650px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin: 0 auto; position: relative; }
+        /* 防複製／減輕翻譯選取 */
+        .no-copy, .no-copy * {
+            -webkit-user-select: none !important;
+            user-select: none !important;
+            -webkit-touch-callout: none !important;
+        }
+        .protected-eng {
+            -webkit-user-select: none !important;
+            user-select: none !important;
+        }
+        /* 截圖較易露出身份（浮水印） */
+        .cheat-watermark {
+            pointer-events: none;
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            z-index: 1;
+            opacity: 0.11;
+            font-size: 13px;
+            font-weight: bold;
+            color: #c53030;
+            line-height: 2.2;
+            word-break: break-all;
+            transform: rotate(-18deg);
+            transform-origin: center;
+            padding: 20px;
+        }
+        .vocab-item, #studentTestSection { position: relative; }
+        .vocab-item .nvn-row, .vocab-item .vocab-footer { position: relative; z-index: 2; }
+        body.anti-cheat-blur #mainSection .protected-eng,
+        body.anti-cheat-blur #studentTestSection {
+            filter: blur(10px);
+            transition: filter 0.15s;
+        }
         h2 { color: #2c3e50; margin-top: 0; text-align: center; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
         .card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #fff; }
         label { font-weight: bold; display: block; margin: 10px 0 5px; color: #4a5568; }
@@ -66,7 +101,7 @@
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0,0,0,0.65);
-            z-index: 9999;
+            z-index: 9998;
             justify-content: center;
             align-items: center;
             flex-direction: column;
@@ -75,6 +110,7 @@
             font-weight: bold;
         }
         #loadingOverlay.active { display: flex; }
+        #teacherPwModal { z-index: 10001 !important; }
         .spinner {
             width: 50px; height: 50px;
             border: 5px solid #ffffff55;
@@ -91,6 +127,10 @@
 <div id="loadingOverlay">
     <div class="spinner"></div>
     <div id="loadingText">載入中，請稍候...</div>
+    <button type="button" id="btnDismissLoading" onclick="forceDismissLoading()"
+        style="display:none; margin-top:18px; background:#e53e3e; color:white; border:none; padding:12px 20px; border-radius:8px; font-weight:bold; font-size:15px; cursor:pointer;">
+        若卡住請按此關閉
+    </button>
 </div>
 
 <div class="container">
@@ -109,7 +149,7 @@
         <div id="loginStatus" class="msg error"></div>
     </div>
 
-    <div id="mainSection" class="hidden">
+    <div id="mainSection" class="hidden no-copy notranslate" translate="no">
         <div class="student-bar">
             <span id="displayStudent">學生：---</span>
             <span id="displayClass">班別：---</span>
@@ -184,7 +224,7 @@
     </div>
 
     <!-- 學生機默書介面（老師操作） -->
-    <div id="studentTestSection" class="hidden" style="background:#1a202c; color:#e2e8f0; border-radius:12px; padding:22px; margin-top:16px; border:2px solid #4a5568;">
+    <div id="studentTestSection" class="hidden no-copy notranslate" translate="no" style="background:#1a202c; color:#e2e8f0; border-radius:12px; padding:22px; margin-top:16px; border:2px solid #4a5568;">
         <h2 style="border:none; color:#63b3ed; margin:0 0 8px 0;">📝 默書測試（老師操作）</h2>
         <p id="stStudentBar" style="font-size:16px; color:#a0aec0; margin:0 0 16px 0;"></p>
 
@@ -219,7 +259,10 @@
                 <span style="color:#718096; font-size:12px;">疏</span>
                 <span id="stSpeechGapLabel" style="color:#fbd38d; font-weight:bold; min-width:64px;">350 ms</span>
             </div>
-            <p style="color:#718096; font-size:12px; margin:8px 0 0 0;">會逐個英文詞播放，詞與詞之間可加停頓（0～1200 毫秒）。調好後再按「播放讀音」。</p>
+            <p style="color:#718096; font-size:12px; margin:8px 0 0 0;">停頓愈大，詞與詞之間愈疏。若無聲請先按「修復語音」再播。</p>
+            <button type="button" onclick="repairSpeech()" style="margin-top:10px; background:#4a5568; color:white; border:none; padding:10px 14px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px;">
+                🔧 修復語音（無聲時按）
+            </button>
         </div>
 
         <div id="stTestQuestions"></div>
@@ -277,12 +320,40 @@
     let speechGapMs = 350; // 字詞之間停頓（毫秒）
     let speechQueueTimer = null;
 
+    let loadingWatchTimer = null;
+
     function showLoading(text) {
+        const overlay = document.getElementById("loadingOverlay");
+        const dismiss = document.getElementById("btnDismissLoading");
         document.getElementById("loadingText").innerText = text || "載入中，請稍候...";
-        document.getElementById("loadingOverlay").classList.add("active");
+        if (dismiss) dismiss.style.display = "none";
+        overlay.classList.add("active");
+        if (loadingWatchTimer) clearTimeout(loadingWatchTimer);
+        // 8 秒後顯示「關閉」防卡死遮罩
+        loadingWatchTimer = setTimeout(function() {
+            if (dismiss) dismiss.style.display = "inline-block";
+        }, 8000);
     }
     function hideLoading() {
         document.getElementById("loadingOverlay").classList.remove("active");
+        const dismiss = document.getElementById("btnDismissLoading");
+        if (dismiss) dismiss.style.display = "none";
+        if (loadingWatchTimer) {
+            clearTimeout(loadingWatchTimer);
+            loadingWatchTimer = null;
+        }
+    }
+    function forceDismissLoading() {
+        hideLoading();
+        // 恢復可能被鎖住的按鈕
+        const btnP = document.getElementById("stBtnPass");
+        const btnF = document.getElementById("stBtnFail");
+        if (btnP) btnP.disabled = false;
+        if (btnF) btnF.disabled = false;
+        const btnLogin = document.getElementById("btnLogin");
+        if (btnLogin) btnLogin.disabled = false;
+        const btnJoin = document.getElementById("btnJoinQueue");
+        if (btnJoin) btnJoin.disabled = false;
     }
 
     function getSessionBounds() {
@@ -458,28 +529,33 @@
             return;
         }
 
+        const wmId = (currentStudent && currentStudent.sid) ? currentStudent.sid : "";
+        const wmText = (wmId + " · " + (currentStudent && currentStudent.name ? currentStudent.name : "") + " · ").repeat(8);
+
         mySentences.forEach((s) => {
             const div = document.createElement("div");
-            div.className = "vocab-item";
+            div.className = "vocab-item notranslate";
+            div.setAttribute("translate", "no");
             
             div.innerHTML = `
-                <div class="nvn-row">
+                <div class="cheat-watermark" aria-hidden="true">${escapeHtml(wmText)}</div>
+                <div class="nvn-row protected-eng notranslate" translate="no">
                     <div class="nvn-box box-n1">
                         <div class="box-label">主語 Noun</div>
-                        <div class="box-word">${s.n1}</div>
+                        <div class="box-word">${escapeHtml(s.n1)}</div>
                     </div>
                     <div class="nvn-box box-v">
                         <div class="box-label">動詞 Verb</div>
-                        <div class="box-word">${s.v}</div>
+                        <div class="box-word">${escapeHtml(s.v)}</div>
                     </div>
                     <div class="nvn-box box-n2">
                         <div class="box-label">賓語 Noun</div>
-                        <div class="box-word">${s.n2}</div>
+                        <div class="box-word">${escapeHtml(s.n2)}</div>
                     </div>
                 </div>
                 <div class="vocab-footer">
-                    <div class="vocab-chinese">📌 提示：${s.chinese}</div>
-                    <button class="btn-audio" onclick="speakText('${s.full.replace(/'/g, "\\'")}')">🔊 聽整句讀音</button>
+                    <div class="vocab-chinese">📌 提示：${escapeHtml(s.chinese)}</div>
+                    <button class="btn-audio" onclick="speakText('${s.full.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}')">🔊 聽整句讀音</button>
                 </div>
             `;
             container.appendChild(div);
@@ -503,16 +579,46 @@
     }
 
     function stopSpeech() {
-        window.speechSynthesis.cancel();
+        try {
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.resume();
+        } catch (e) {}
         if (speechQueueTimer) {
             clearTimeout(speechQueueTimer);
             speechQueueTimer = null;
         }
     }
 
+    /** iPad／Safari 語音引擎容易卡死，手動重置 */
+    function repairSpeech() {
+        stopSpeech();
+        try {
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.resume();
+            // 觸發 voices 載入
+            window.speechSynthesis.getVoices();
+        } catch (e) {}
+        alert("已重置語音引擎。\n請再按一次「播放讀音」。\n若仍無聲：檢查 iPad 靜音掣／音量，或重新整理網頁。");
+    }
+
+    function pickEnglishVoice() {
+        try {
+            const voices = window.speechSynthesis.getVoices() || [];
+            if (!voices.length) return null;
+            // 優先 en-US / en-GB
+            let v = voices.find(function(x) { return /^en-US/i.test(x.lang); });
+            if (!v) v = voices.find(function(x) { return /^en-GB/i.test(x.lang); });
+            if (!v) v = voices.find(function(x) { return /^en/i.test(x.lang); });
+            return v || null;
+        } catch (e) {
+            return null;
+        }
+    }
+
     /**
-     * 播放英文：有停頓設定時逐詞播放（詞與詞之間加間隔）
-     * gap=0 時整句一次播完
+     * 播放英文（iPad 友善）
+     * 唔再用 setTimeout 逐詞播（會斷開 iOS 使用者手勢 → 無聲）
+     * 有停頓時：用省略號隔開詞，一次 utterance 播完
      */
     function speakText(text) {
         stopSpeech();
@@ -526,40 +632,65 @@
         const raw = String(text || "").trim();
         if (!raw) return;
 
-        // 無停頓：整句一次
-        if (gap <= 0) {
-            const u = new SpeechSynthesisUtterance(raw);
-            u.lang = "en-US";
-            u.rate = rate;
-            window.speechSynthesis.speak(u);
+        let speakStr = raw;
+        if (gap > 0) {
+            const words = raw.split(/\s+/).filter(Boolean);
+            // gap 愈大，詞之間停頓符號愈多（仍係單一 utterance，iOS 較穩定）
+            var sep = " , ";
+            if (gap >= 250) sep = " … ";
+            if (gap >= 500) sep = " … … ";
+            if (gap >= 800) sep = " … … … ";
+            speakStr = words.join(sep);
+        }
+
+        try {
+            window.speechSynthesis.resume();
+        } catch (e1) {}
+
+        const u = new SpeechSynthesisUtterance(speakStr);
+        u.lang = "en-US";
+        u.rate = rate;
+        u.pitch = 1;
+        u.volume = 1;
+        const voice = pickEnglishVoice();
+        if (voice) u.voice = voice;
+
+        u.onerror = function(ev) {
+            console.warn("speech error", ev);
+        };
+
+        // 部分 iPad 要等 voices 就緒
+        const voices = window.speechSynthesis.getVoices();
+        if (!voices || voices.length === 0) {
+            window.speechSynthesis.onvoiceschanged = function() {
+                window.speechSynthesis.onvoiceschanged = null;
+                const v2 = pickEnglishVoice();
+                if (v2) u.voice = v2;
+                try { window.speechSynthesis.speak(u); } catch (e2) {}
+            };
+            // 後備：300ms 後仍播
+            speechQueueTimer = setTimeout(function() {
+                try { window.speechSynthesis.speak(u); } catch (e3) {}
+            }, 300);
             return;
         }
 
-        // 有停頓：按空白／標點拆詞，逐個播
-        const words = raw.split(/\s+/).filter(Boolean);
-        let i = 0;
-        function speakNext() {
-            if (i >= words.length) return;
-            const word = words[i].replace(/^[^A-Za-z0-9']+|[^A-Za-z0-9']+$/g, "") || words[i];
-            const u = new SpeechSynthesisUtterance(word);
-            u.lang = "en-US";
-            u.rate = rate;
-            u.onend = function() {
-                i++;
-                if (i < words.length) {
-                    speechQueueTimer = setTimeout(speakNext, gap);
-                }
-            };
-            u.onerror = function() {
-                i++;
-                if (i < words.length) {
-                    speechQueueTimer = setTimeout(speakNext, gap);
-                }
-            };
+        try {
             window.speechSynthesis.speak(u);
+        } catch (e4) {
+            alert("無法播放讀音。請按「修復語音」或重新整理。");
         }
-        speakNext();
     }
+
+    // 預載語音列表（頁面一開就做）
+    try {
+        if (window.speechSynthesis) {
+            window.speechSynthesis.getVoices();
+            window.speechSynthesis.onvoiceschanged = function() {
+                window.speechSynthesis.getVoices();
+            };
+        }
+    } catch (e0) {}
 
     function requestQueue() {
         if (!currentStudent) return;
@@ -675,14 +806,26 @@
         }, 2000);
     }
 
+    // pendingTeacherAction: "start" | "pass"
+    let pendingTeacherAction = "start";
+
     // —— 學生機默書（老師輸入密碼，隱藏顯示）——
-    function openTeacherPasswordModal() {
+    function openTeacherPasswordModal(action) {
         if (!currentStudent) {
             alert("請先登入並排隊。");
             return;
         }
+        pendingTeacherAction = action || "start";
         const modal = document.getElementById("teacherPwModal");
         const input = document.getElementById("teacherPwInput");
+        const title = modal ? modal.querySelector("h3") : null;
+        const hint = modal ? modal.querySelector("p") : null;
+        if (title) title.innerText = pendingTeacherAction === "pass" ? "🔐 老師確認 PASS" : "🔐 老師專用";
+        if (hint) {
+            hint.innerText = pendingTeacherAction === "pass"
+                ? "請輸入老師密碼以確認合格（與開始測試相同）"
+                : "請輸入密碼以開始默書（輸入時會隱藏）";
+        }
         modal.style.display = "flex";
         input.value = "";
         setTimeout(function() { input.focus(); }, 50);
@@ -699,11 +842,16 @@
             alert("請輸入密碼。");
             return;
         }
+        const act = pendingTeacherAction;
         closeTeacherPasswordModal();
-        teacherUnlockTest(pw);
+        if (act === "pass") {
+            doStudentSubmitResult("Pass", pw);
+        } else {
+            teacherUnlockTest(pw);
+        }
     }
 
-    // Enter 鍵提交密碼
+    // Enter 鍵提交密碼 + 基本防作弊
     document.addEventListener("DOMContentLoaded", function() {
         const input = document.getElementById("teacherPwInput");
         if (input) {
@@ -711,7 +859,58 @@
                 if (e.key === "Enter") confirmTeacherPassword();
             });
         }
+        initAntiCheat();
     });
+
+    /**
+     * 防截圖／翻譯：網頁無法 100% 封鎖系統截圖（尤其 iPad），
+     * 以下為可做的阻嚇與減低作弊便利。
+     */
+    function initAntiCheat() {
+        // 禁止在溫習／默書區開右鍵選單（減右鍵複製／翻譯）
+        document.addEventListener("contextmenu", function(e) {
+            if (e.target.closest("#mainSection, #studentTestSection, #vocabList")) {
+                e.preventDefault();
+            }
+        });
+        // 禁止常見快捷鍵：列印、另存、全選英文區
+        document.addEventListener("keydown", function(e) {
+            const key = (e.key || "").toLowerCase();
+            const inProtected = document.getElementById("mainSection") &&
+                !document.getElementById("mainSection").classList.contains("hidden");
+            const inTest = document.getElementById("studentTestSection") &&
+                !document.getElementById("studentTestSection").classList.contains("hidden");
+            if (!inProtected && !inTest) return;
+            if (e.ctrlKey || e.metaKey) {
+                if (key === "p" || key === "s" || key === "u") {
+                    e.preventDefault();
+                }
+            }
+            // PrintScreen：無法真正阻止截圖，但可短暫模糊內容
+            if (key === "printscreen") {
+                document.body.classList.add("anti-cheat-blur");
+                setTimeout(function() {
+                    document.body.classList.remove("anti-cheat-blur");
+                }, 2000);
+            }
+        });
+        // 切去其他 App／控制中心時短暫模糊（截圖當下較難睇清）
+        document.addEventListener("visibilitychange", function() {
+            if (document.hidden) {
+                document.body.classList.add("anti-cheat-blur");
+            } else {
+                setTimeout(function() {
+                    document.body.classList.remove("anti-cheat-blur");
+                }, 400);
+            }
+        });
+        // 禁止拖曳文字
+        document.addEventListener("dragstart", function(e) {
+            if (e.target.closest("#mainSection, #studentTestSection")) {
+                e.preventDefault();
+            }
+        });
+    }
 
     function teacherUnlockTest(pw) {
         if (!currentStudent) {
@@ -719,7 +918,7 @@
             return;
         }
         if (!pw) {
-            openTeacherPasswordModal();
+            openTeacherPasswordModal("start");
             return;
         }
 
@@ -788,6 +987,8 @@
         const container = document.getElementById("stTestQuestions");
         container.innerHTML = "";
         const qs = data.testQuestions || [];
+        const wmId = (s.sid || (currentStudent && currentStudent.sid) || "");
+        const wmText = (wmId + " · ").repeat(12);
         let n = 1;
         qs.forEach(raw => {
             if (!raw) return;
@@ -795,11 +996,16 @@
             const eng = parts[0] || "";
             const chi = parts[1] || "（無中文提示）";
             const div = document.createElement("div");
-            div.style.cssText = "background:#2d3748; padding:16px; border-radius:8px; margin-bottom:12px; border-left:5px solid #48bb78;";
+            div.className = "notranslate protected-eng";
+            div.setAttribute("translate", "no");
+            div.style.cssText = "background:#2d3748; padding:16px; border-radius:8px; margin-bottom:12px; border-left:5px solid #48bb78; position:relative; overflow:hidden;";
             div.innerHTML =
+                '<div class="cheat-watermark" aria-hidden="true">' + escapeHtml(wmText) + '</div>' +
+                '<div style="position:relative; z-index:2;">' +
                 '<div style="font-size:26px; color:#fbd38d; font-weight:bold; line-height:1.4; margin-bottom:10px;">📢 第 ' + n + ' 題：' + escapeHtml(chi) + '</div>' +
                 '<button type="button" onclick="speakText(\'' + eng.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + '\')" style="background:#9b59b6; color:white; border:none; padding:10px 14px; border-radius:6px; font-weight:bold; cursor:pointer;">🔊 播放讀音</button>' +
-                '<div class="st-eng-ans" style="display:none; margin-top:12px; font-size:20px; font-weight:bold; color:#63b3ed; background:#0d1117; padding:12px; border-radius:6px; border:1px dashed #4a5568;">💡 正確答案：' + escapeHtml(eng) + '</div>';
+                '<div class="st-eng-ans notranslate" translate="no" style="display:none; margin-top:12px; font-size:20px; font-weight:bold; color:#63b3ed; background:#0d1117; padding:12px; border-radius:6px; border:1px dashed #4a5568;">💡 正確答案：' + escapeHtml(eng) + '</div>' +
+                '</div>';
             container.appendChild(div);
             n++;
         });
@@ -858,29 +1064,44 @@
         const levelChanged = (targetLevel !== studentTestOriginalLevel);
         let msg = "";
         if (status === "Pass") {
-            msg = "確定送出【合格 PASS】？\n准予完成／放學。";
+            msg = "確定送出【合格 PASS】？\n准予完成／放學。\n\n下一步需輸入老師密碼確認。";
             if (levelChanged) msg += "\n\n級別：" + studentTestOriginalLevel + " → " + targetLevel;
-        } else {
-            msg = "確定送出【不合格 FAIL】？\n學生需回位重練。";
-            if (levelChanged) msg += "\n\n級別：" + studentTestOriginalLevel + " → " + targetLevel;
+            if (!confirm(msg)) return;
+            // PASS 必須老師密碼
+            openTeacherPasswordModal("pass");
+            return;
         }
+        msg = "確定送出【不合格 FAIL】？\n學生需回位重練。";
+        if (levelChanged) msg += "\n\n級別：" + studentTestOriginalLevel + " → " + targetLevel;
         if (!confirm(msg)) return;
+        doStudentSubmitResult("Fail", null);
+    }
 
+    function doStudentSubmitResult(status, teacherPassword) {
+        if (!currentStudent || !studentTestSession) return;
+
+        const targetLevel = document.getElementById("stActionLevel").value;
         const btnP = document.getElementById("stBtnPass");
         const btnF = document.getElementById("stBtnFail");
         if (btnP) btnP.disabled = true;
         if (btnF) btnF.disabled = true;
 
         showLoading("正在提交結果...");
+        const payload = {
+            action: "submitResult",
+            sid: currentStudent.sid,
+            resultStatus: status,
+            targetLevel: targetLevel,
+            forceClearBatch: false,
+            fromStudent: true
+        };
+        if (status === "Pass") {
+            payload.password = String(teacherPassword || "").trim();
+        }
+
         fetch(GAS_URL, {
             method: "POST",
-            body: JSON.stringify({
-                action: "submitResult",
-                sid: currentStudent.sid,
-                resultStatus: status,
-                targetLevel: targetLevel,
-                forceClearBatch: false
-            })
+            body: JSON.stringify(payload)
         })
         .then(r => r.json())
         .then(data => {
